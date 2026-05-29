@@ -1,5 +1,5 @@
 import pytest
-from babygrad.ops import add, sub, mul, matmul, dot
+from babygrad.ops import add, sub, mul, matmul, dot, div
 
 
 def test_add():
@@ -20,6 +20,16 @@ def test_sub():
 def test_sub_wrong_length():
     with pytest.raises(ValueError):
         sub([2, 2], [5, 1, 1])
+
+
+def test_div():
+    res = div([2, 2], [5, 1])
+    assert res == [0.4, 2]
+
+
+def test_div_wrong_length():
+    with pytest.raises(ValueError):
+        div([2, 2], [5, 1, 1])
 
 
 def test_mul():

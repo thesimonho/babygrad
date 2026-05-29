@@ -13,6 +13,12 @@ def sub(a: list, b: list) -> list[aliases.Number]:
     return [x - y for x, y in zip(a, b)]
 
 
+def div(a: list, b: list) -> list[aliases.Number]:
+    if len(a) != len(b):
+        raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
+    return [x / y for x, y in zip(a, b)]
+
+
 def mul(a: list, b: list) -> list[aliases.Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
