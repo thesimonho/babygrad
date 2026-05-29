@@ -152,3 +152,15 @@ class Tensor:
 
     def t(self):
         return self.transpose()
+
+    def sum(self):
+        return Tensor([ops.reduce_sum(self.data)], shape=(1,))
+
+    def mean(self):
+        return Tensor([ops.reduce_mean(self.data)], shape=(1,))
+
+    def max(self):
+        return Tensor([ops.reduce_max(self.data)], shape=(1,))
+
+    def min(self):
+        return Tensor([ops.reduce_min(self.data)], shape=(1,))

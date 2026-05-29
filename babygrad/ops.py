@@ -84,3 +84,21 @@ def matmul(
                 output.append(result)
 
     return output
+
+
+def reduce_sum(a: list[aliases.Number]) -> aliases.Number:
+    return sum(a)
+
+
+def reduce_mean(a: list[aliases.Number]) -> aliases.Number:
+    if len(a) == 0:
+        raise ValueError
+    return reduce_sum(a) / len(a)
+
+
+def reduce_max(a: list[aliases.Number]) -> aliases.Number:
+    return max(a)
+
+
+def reduce_min(a: list[aliases.Number]) -> aliases.Number:
+    return min(a)
