@@ -26,11 +26,11 @@ The project builds up incrementally from raw tensor operations to a modern trans
   - [x] Subtract
   - [x] Multiply
   - [x] Divide
-  - [ ] Negate\*
-  - [ ] Exp\*
-  - [ ] Log\*
-  - [ ] Sqrt\*
-  - [ ] Power\* (optional unless later math needs it directly)
+  - [x] Negate\*
+  - [x] Exp\*
+  - [x] Log\*
+  - [x] Sqrt\*
+  - [x] Power\*
 - [ ] **Reduction operations** — operations that collapse one or more axes
   - [ ] Sum
   - [ ] Max\*

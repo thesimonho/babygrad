@@ -96,6 +96,15 @@ class Tensor:
 
         return Tensor(ops.sub(self.data, t.data), shape=self.shape)
 
+    def __abs__(self) -> Tensor:
+        return Tensor(ops.absolute(self.data), shape=self.shape)
+
+    def __neg__(self) -> Tensor:
+        return Tensor(ops.neg(self.data), shape=self.shape)
+
+    def __pow__(self, exponent: aliases.Number) -> Tensor:
+        return Tensor(ops.power(self.data, exponent), shape=self.shape)
+
     def __truediv__(self, t: Tensor) -> Tensor:
         if self.shape != t.shape:
             raise ValueError("Shape mismatch. Requires matching shapes.")
@@ -121,6 +130,15 @@ class Tensor:
             data,
             shape=shape,
         )
+
+    def log(self):
+        return Tensor(ops.log(self.data), shape=self.shape)
+
+    def exp(self):
+        return Tensor(ops.exp(self.data), shape=self.shape)
+
+    def sqrt(self):
+        return Tensor(ops.sqrt(self.data), shape=self.shape)
 
     def transpose(self):
         if self.ndim != 2:

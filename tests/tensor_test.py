@@ -1,5 +1,22 @@
 from babygrad.tensor import Tensor
 import pytest
+import math
+
+
+def test_unary_ops():
+    t = Tensor([1, 2, -3, -4], shape=(2, 2))
+    assert abs(t) == Tensor([1, 2, 3, 4], shape=(2, 2))
+    assert -t == Tensor([-1, -2, 3, 4], shape=(2, 2))
+    assert t**2 == Tensor([1, 4, 9, 16], shape=(2, 2))
+    assert abs(t).sqrt() == Tensor([math.sqrt(x) for x in abs(t).data], shape=(2, 2))
+    assert t.exp() == Tensor([math.exp(x) for x in t.data], shape=(2, 2))
+    assert abs(t).log() == Tensor([math.log(x) for x in abs(t).data], shape=(2, 2))
+
+    with pytest.raises(ValueError):
+        t.log()
+
+    with pytest.raises(ValueError):
+        t.sqrt()
 
 
 def test_getitem_1d_scalar():

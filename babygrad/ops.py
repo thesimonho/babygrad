@@ -1,31 +1,56 @@
+import math
 from . import aliases
 
 
-def add(a: list, b: list) -> list[aliases.Number]:
+def add(a: list[aliases.Number], b: list[aliases.Number]) -> list[aliases.Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
     return [x + y for x, y in zip(a, b)]
 
 
-def sub(a: list, b: list) -> list[aliases.Number]:
+def sub(a: list[aliases.Number], b: list[aliases.Number]) -> list[aliases.Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
     return [x - y for x, y in zip(a, b)]
 
 
-def div(a: list, b: list) -> list[aliases.Number]:
+def neg(a: list[aliases.Number]) -> list[aliases.Number]:
+    return [-x for x in a]
+
+
+def absolute(a: list[aliases.Number]) -> list[aliases.Number]:
+    return [abs(x) for x in a]
+
+
+def exp(a: list[aliases.Number]) -> list[aliases.Number]:
+    return [math.exp(x) for x in a]
+
+
+def log(a: list[aliases.Number]) -> list[aliases.Number]:
+    return [math.log(x) for x in a]
+
+
+def sqrt(a: list[aliases.Number]) -> list[aliases.Number]:
+    return [math.sqrt(x) for x in a]
+
+
+def power(a: list[aliases.Number], exponent: aliases.Number) -> list[aliases.Number]:
+    return [x**exponent for x in a]
+
+
+def div(a: list[aliases.Number], b: list[aliases.Number]) -> list[aliases.Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
     return [x / y for x, y in zip(a, b)]
 
 
-def mul(a: list, b: list) -> list[aliases.Number]:
+def mul(a: list[aliases.Number], b: list[aliases.Number]) -> list[aliases.Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
     return [x * y for x, y in zip(a, b)]
 
 
-def dot(a: list, b: list) -> aliases.Number:
+def dot(a: list[aliases.Number], b: list[aliases.Number]) -> aliases.Number:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
 
@@ -33,7 +58,10 @@ def dot(a: list, b: list) -> aliases.Number:
 
 
 def matmul(
-    a: list, b: list, a_shape: aliases.Shape, b_shape: aliases.Shape
+    a: list[aliases.Number],
+    b: list[aliases.Number],
+    a_shape: aliases.Shape,
+    b_shape: aliases.Shape,
 ) -> list[aliases.Number]:
     """
     Calculate the dot product of two tensors.
