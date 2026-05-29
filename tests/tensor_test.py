@@ -2,6 +2,42 @@ from babygrad.tensor import Tensor
 import pytest
 
 
+def test_getitem_1d_scalar():
+    t = Tensor([1, 2, 3], shape=(3,))
+    assert t[1] == 2
+
+
+def test_getitem_1d_scalar_invalid():
+    t = Tensor([1, 2, 3], shape=(3,))
+    with pytest.raises(IndexError):
+        t[3]
+
+
+def test_getitem_2d_row():
+    t = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
+    assert t[1] == Tensor([4, 5, 6], shape=(3,))
+
+
+def test_getitem_2d_row_invalid():
+    t = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
+    with pytest.raises(IndexError):
+        t[2]
+
+
+def test_getitem_2d_scalar():
+    t = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
+    assert t[1, 0] == 4
+    assert t[1, 2] == 6
+
+
+def test_getitem_2d_scalar_invalid():
+    t = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
+    with pytest.raises(IndexError):
+        t[0, 3]
+    with pytest.raises(IndexError):
+        t[1, 3]
+
+
 def test_add_vector_vector():
     res = Tensor([2, 2], shape=(2, 1)) + Tensor([5, 1], shape=(2, 1))
     assert res.data == [7, 3]

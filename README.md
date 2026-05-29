@@ -15,13 +15,13 @@ The project builds up incrementally from raw tensor operations to a modern trans
 
 `*` = useful later, but not required before starting autograd.
 
-- [ ] **Tensor data structure** — storage, shape, indexing, and size metadata
+- [x] **Tensor data structure** — storage, shape, indexing, and size metadata
   - [x] Flat storage
   - [x] Shape
   - [x] Rank / dimension count\*
   - [x] Element count\*
-  - [ ] Basic indexing and offset calculation
-- [ ] **Element-wise operations** — per-value unary and binary operations
+  - [x] Basic indexing and offset calculation
+- [x] **Element-wise operations** — per-value unary and binary operations
   - [x] Add
   - [x] Subtract
   - [x] Multiply
