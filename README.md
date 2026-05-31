@@ -41,9 +41,9 @@ The project builds up incrementally from raw tensor operations to a modern trans
   - [ ] Flatten\*
   - [ ] Permute / swap axes\*
   - [ ] View vs copy semantics\* (optional at first)
-- [ ] **Broadcasting** — shape alignment and expansion rules
-  - [ ] Scalar broadcasting
-  - [ ] Singleton-dimension broadcasting\*
+- [x] **Broadcasting** — shape alignment and expansion rules
+  - [x] Scalar broadcasting
+  - [x] Singleton-dimension broadcasting\*
   - [ ] Full NumPy-style broadcasting\* (optional at first)
 - [x] **Matrix multiplication** — the core compute primitive
   - [x] Vector dot product
@@ -125,7 +125,3 @@ The project builds up incrementally from raw tensor operations to a modern trans
 - [ ] **Sparse gating** — routing tokens to a subset of expert FFNs
 - [ ] **MoE transformer block** — integrating sparse experts into the transformer
   - [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Shazeer et al., 2017
-
-## Status
-
-Just getting started.
