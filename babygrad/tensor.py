@@ -1,6 +1,15 @@
+from __future__ import annotations
+
 import math
-from . import ops
+
 from . import aliases
+from . import ops
+from typing import Any, cast
+
+from . import text as text_module  # pyright: ignore[reportAttributeAccessIssue]
+
+
+text = cast(Any, text_module)
 
 
 class Tensor:
@@ -35,6 +44,14 @@ class Tensor:
         assert len(data) == math.prod(shape), "Tensor data has incorrect shape"
         self.data = data
         self.shape = shape
+
+    def __repr__(self) -> str:
+        """Return an aligned matrix-style preview of the tensor contents."""
+        if self.ndim == 1:
+            return f"{self.shape[0]} items\n{text.vector(self.data)}"
+        if self.ndim != 2:
+            return f"shape={self.shape}\n{text.vector(self.data)}"
+        return f"{self.nrow} rows x {self.ncol} cols\n{text.matrix(self.data, self.nrow, self.ncol)}"
 
     def __eq__(self, t):
         if not isinstance(t, Tensor):
@@ -141,7 +158,7 @@ class Tensor:
         return Tensor(ops.sqrt(self.data), shape=self.shape)
 
     def copy(self):
-        return Tensor([x for x in self.data], shape=self.shape)
+        return Tensor(list(self.data), shape=self.shape)
 
     def reshape(self, shape: aliases.Shape):
         if math.prod(self.shape) != math.prod(shape):

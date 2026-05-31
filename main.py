@@ -1,5 +1,10 @@
+from pathlib import Path
+from babygrad.data import load_csv
+
+
 def main():
-    print("Hello from babygrad!")
+    data = load_csv(Path("./data/iris.csv"))
+    print(data)
 
 
 if __name__ == "__main__":
