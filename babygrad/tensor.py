@@ -143,6 +143,16 @@ class Tensor:
     def copy(self):
         return Tensor([x for x in self.data], shape=self.shape)
 
+    def reshape(self, shape: aliases.Shape):
+        if math.prod(self.shape) != math.prod(shape):
+            raise ValueError("New shape must contain the same number of items")
+        t = self.copy()
+        t.shape = shape
+        return t
+
+    def flatten(self):
+        return self.reshape((len(self.data),))
+
     def transpose(self):
         if self.ndim != 2:
             raise ValueError("Requires a 2D tensor")

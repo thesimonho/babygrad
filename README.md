@@ -35,10 +35,10 @@ The project builds up incrementally from raw tensor operations to a modern trans
   - [x] Sum
   - [x] Max\*
   - [x] Mean\*
-- [ ] **Shape manipulation** — changing how tensor data is arranged or viewed
-  - [ ] Reshape
+- [x] **Shape manipulation** — changing how tensor data is arranged or viewed
+  - [x] Reshape
   - [x] Transpose
-  - [ ] Flatten\*
+  - [x] Flatten\*
   - [ ] Permute / swap axes\*
   - [x] View vs copy semantics\* (copy is done)
 - [x] **Broadcasting** — shape alignment and expansion rules

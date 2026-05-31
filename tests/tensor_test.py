@@ -153,6 +153,27 @@ def test_copy():
     assert t.data == c.data
 
 
+def test_reshape():
+    t = Tensor([1, 2, 3], (1, 3))
+    r = t.reshape((3, 1))
+    assert t.data is not r.data  # not a copy
+    assert t.data == r.data
+    assert r.shape == (3, 1)
+
+
+def test_reshape_valid():
+    t = Tensor([1, 2, 3], (1, 3))
+    with pytest.raises(ValueError):
+        t.reshape((1, 4))
+
+
+def flatten():
+    t = Tensor([1, 2, 3, 4, 5, 6], (2, 3))
+    f = t.flatten()
+    assert t.data == f.data
+    assert f.shape == (len(t.data),)
+
+
 def test_transpose():
     m = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
     t = m.transpose()
