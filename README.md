@@ -40,7 +40,7 @@ The project builds up incrementally from raw tensor operations to a modern trans
   - [x] Transpose
   - [ ] Flatten\*
   - [ ] Permute / swap axes\*
-  - [ ] View vs copy semantics\* (optional at first)
+  - [x] View vs copy semantics\* (copy is done)
 - [x] **Broadcasting** — shape alignment and expansion rules
   - [x] Scalar broadcasting
   - [x] Singleton-dimension broadcasting\*

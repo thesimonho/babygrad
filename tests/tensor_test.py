@@ -144,6 +144,15 @@ def test_matmul_matrix_matrix():
     assert res.shape == (2, 3)
 
 
+def test_copy():
+    t = Tensor([1, 2, 3], shape=(1, 3))
+    c = t.copy()
+
+    assert t is not c
+    assert t.data is not c.data
+    assert t.data == c.data
+
+
 def test_transpose():
     m = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
     t = m.transpose()

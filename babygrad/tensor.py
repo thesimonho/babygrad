@@ -140,6 +140,9 @@ class Tensor:
     def sqrt(self):
         return Tensor(ops.sqrt(self.data), shape=self.shape)
 
+    def copy(self):
+        return Tensor([x for x in self.data], shape=self.shape)
+
     def transpose(self):
         if self.ndim != 2:
             raise ValueError("Requires a 2D tensor")
