@@ -1,10 +1,16 @@
 from pathlib import Path
-from babygrad.data import load_csv
+from babygrad.data import (
+    load_csv,
+    prepare_supervised_data,
+)
 
 
 def main():
-    data = load_csv(Path("./data/iris.csv"))
-    print(data)
+    dataset = load_csv(Path("./data/iris.csv"))
+    dataset.target_col_idx = 4
+    splits = prepare_supervised_data(dataset)
+
+    print(splits)
 
 
 if __name__ == "__main__":

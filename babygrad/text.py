@@ -1,9 +1,7 @@
-from . import aliases
-
 TRUNCATION_LIMIT = 8
 
 
-def vector(data: list[aliases.Number]) -> str:
+def vector(data: list[object]) -> str:
     """Format a flat list of numbers with aligned truncation."""
     indexes = _visible_indexes(len(data))
     width = _vector_width(data, indexes)
@@ -11,21 +9,50 @@ def vector(data: list[aliases.Number]) -> str:
     return f"[{items}]"
 
 
-def matrix(data: list[aliases.Number], nrow: int, ncol: int) -> str:
-    """Format row-major data as an aligned matrix with truncation."""
+def matrix(
+    data: list[object],
+    nrow: int,
+    ncol: int,
+    headers: list[str] | None = None,
+) -> str:
+    """Format row-major data as an aligned matrix with optional headers."""
+    if headers is not None and len(headers) != ncol:
+        raise ValueError("headers length must match ncol")
+
     row_indexes = _visible_indexes(nrow)
     col_indexes = _visible_indexes(ncol)
-    col_widths = _column_widths(data, ncol, row_indexes, col_indexes)
+    col_widths = _column_widths(data, ncol, row_indexes, col_indexes, headers)
     rows = [
         _format_matrix_row(data, ncol, row_index, col_indexes, col_widths)
         for row_index in row_indexes
     ]
+
+    if headers is not None:
+        rows.insert(0, _format_header(headers, col_indexes, col_widths))
+
     body = "\n".join(f"  {row}" for row in rows)
     return f"[\n{body}\n]"
 
 
+def _format_header(
+    headers: list[str],
+    col_indexes: list[int | None],
+    col_widths: dict[int, int],
+) -> str:
+    """Format one aligned header row for the matrix representation."""
+    formatted_items = []
+
+    for col_index in col_indexes:
+        if col_index is None:
+            formatted_items.append("...")
+        else:
+            formatted_items.append(headers[col_index].rjust(col_widths[col_index]))
+
+    return "[" + "  ".join(formatted_items) + "]"
+
+
 def _format_matrix_row(
-    data: list[aliases.Number],
+    data: list[object],
     ncol: int,
     row_index: int | None,
     col_indexes: list[int | None],
@@ -48,9 +75,7 @@ def _format_matrix_row(
     return "[" + "  ".join(formatted_items) + "]"
 
 
-def _format_vector(
-    data: list[aliases.Number], indexes: list[int | None], width: int
-) -> str:
+def _format_vector(data: list[object], indexes: list[int | None], width: int) -> str:
     """Format scalar values with middle truncation and fixed width."""
     formatted_items = []
 
@@ -64,10 +89,11 @@ def _format_vector(
 
 
 def _column_widths(
-    data: list[aliases.Number],
+    data: list[object],
     ncol: int,
     row_indexes: list[int | None],
     col_indexes: list[int | None],
+    headers: list[str] | None = None,
 ) -> dict[int, int]:
     """Return display widths for the visible matrix columns."""
     widths = {}
@@ -76,16 +102,21 @@ def _column_widths(
         if col_index is None:
             continue
 
-        widths[col_index] = max(
-            len(repr(data[row_index * ncol + col_index]))
-            for row_index in row_indexes
-            if row_index is not None
+        value_width = max(
+            (
+                len(repr(data[row_index * ncol + col_index]))
+                for row_index in row_indexes
+                if row_index is not None
+            ),
+            default=0,
         )
+        header_width = len(headers[col_index]) if headers is not None else 0
+        widths[col_index] = max(value_width, header_width)
 
     return widths
 
 
-def _vector_width(data: list[aliases.Number], indexes: list[int | None]) -> int:
+def _vector_width(data: list[object], indexes: list[int | None]) -> int:
     """Return the display width for visible vector values."""
     visible_indexes = [index for index in indexes if index is not None]
 
