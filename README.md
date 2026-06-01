@@ -13,7 +13,7 @@ The project builds up incrementally from raw tensor operations to a modern trans
 
 ### Phase 1: Tensor Foundations
 
-`*` = useful later, but not required before starting autograd.
+`*` = useful later, but not required before building forward-only layers.
 
 - [x] **Tensor data structure** — storage, shape, indexing, and size metadata
   - [x] Flat storage
@@ -52,21 +52,25 @@ The project builds up incrementally from raw tensor operations to a modern trans
   - [x] Matrix-matrix multiplication
   - [ ] Batched matrix multiplication\*
 
-### Phase 2: Autograd
+### Phase 2: Forward Neural Network Primitives
+
+- [ ] **Linear layer** — weights, biases, forward values
+- [ ] **Activation functions** — sigmoid, tanh, ReLU forward values
+- [ ] **Loss functions** — MSE, cross-entropy loss values
+- [ ] **Sequential model** — run ordered layers from input tensor to `y_pred`
+
+### Phase 3: Autograd
 
 - [ ] **Computational graph** — tracking operations as a DAG of nodes
 - [ ] **Backward pass** — reverse-mode autodiff, chain rule
 - [ ] **Gradient accumulation** — handling multi-use tensors
 
-### Phase 3: Neural Network Primitives
+### Phase 4: Training
 
-- [ ] **Linear layer** — weights, biases, forward and backward
-- [ ] **Activation functions** — sigmoid, tanh, ReLU
-- [ ] **Loss functions** — MSE, cross-entropy
 - [ ] **SGD optimizer** — parameter updates, learning rate
 - [ ] **Training loop** — forward, loss, backward, step
 
-### Phase 4: Going Deeper
+### Phase 5: Going Deeper
 
 - [ ] **Multi-layer perceptron** — stacking linear + activation layers
 - [ ] **Vanishing gradients** — observing the problem firsthand with deep stacks
@@ -76,13 +80,13 @@ The project builds up incrementally from raw tensor operations to a modern trans
 - [ ] **Batch normalization**
   - [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Ioffe & Szegedy, 2015
 
-### Phase 5: Residual Networks
+### Phase 6: Residual Networks
 
 - [ ] **Skip connections** — the residual block as a solution to vanishing gradients
 - [ ] **Stacking residual blocks** — building a small ResNet
   - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — He et al., 2015
 
-### Phase 6: The Original Transformer
+### Phase 7: The Original Transformer
 
 - [ ] **Scaled dot-product attention** — queries, keys, values
 - [ ] **Multi-head attention** — parallel attention heads, concatenation, projection
@@ -94,7 +98,7 @@ The project builds up incrementally from raw tensor operations to a modern trans
 - [ ] **Masking** — padding masks, causal (look-ahead) masks
   - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Vaswani et al., 2017
 
-### Phase 7: Modern Transformer Modifications
+### Phase 8: Modern Transformer Modifications
 
 - [ ] **RMSNorm** — replacing LayerNorm, dropping the mean centering
   - [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467) — Zhang & Sennrich, 2019
@@ -103,7 +107,7 @@ The project builds up incrementally from raw tensor operations to a modern trans
 - [ ] **Rotary Position Embedding (RoPE)** — rotation-based positional encoding replacing sinusoidal
   - [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864) — Su et al., 2021
 
-### Phase 8: Efficient Attention
+### Phase 9: Efficient Attention
 
 - [ ] **Multi-Query Attention (MQA)** — single shared KV head across all query heads
   - [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150) — Shazeer, 2019
@@ -113,14 +117,14 @@ The project builds up incrementally from raw tensor operations to a modern trans
   - [Longformer: The Long-Document Transformer](https://arxiv.org/abs/2004.05150) — Beltagy et al., 2020
   - [Mistral 7B](https://arxiv.org/abs/2310.06825) — Jiang et al., 2023
 
-### Phase 9: Inference Optimizations
+### Phase 10: Inference Optimizations
 
 - [ ] **KV-cache** — caching key/value pairs for autoregressive generation
 - [ ] **Speculative decoding** — draft model + verification for parallel token generation
   - [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192) — Leviathan et al., 2022
   - [Accelerating Large Language Model Decoding with Speculative Sampling](https://arxiv.org/abs/2302.01318) — Chen et al., 2023
 
-### Phase 10: Mixture of Experts
+### Phase 11: Mixture of Experts
 
 - [ ] **Sparse gating** — routing tokens to a subset of expert FFNs
 - [ ] **MoE transformer block** — integrating sparse experts into the transformer

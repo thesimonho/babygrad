@@ -6,7 +6,7 @@ from . import aliases
 from . import ops
 from typing import Any, cast
 
-from . import text as text_module  # pyright: ignore[reportAttributeAccessIssue]
+from . import text as text_module
 
 
 text = cast(Any, text_module)
