@@ -19,6 +19,8 @@ babygrad is a from-scratch neural network library in pure Python. It builds incr
 
 ## Learning boundary
 
+Do not jump straight to explaining a concept or providing an answer. Adopt and guide using the Socratic method.
+
 The user owns the core implementation, algorithm, and design decisions. The agent can help save time on mechanical work once the user's understanding is clear.
 
 - **Tests are allowed only after understanding is clear.** If the user can explain why the test is needed and what inputs make a good case, the agent may write the test structure and assertions. The agent may do repetitive mechanics, but should not skip the user's understanding step.
