@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import math
 
-from . import aliases
-from . import ops
+from . import aliases, ops, lib
 from typing import Any, cast
 
 from . import text as text_module
@@ -102,16 +101,12 @@ class Tensor:
             raise ValueError("Too many passed dimensions")
 
     def __add__(self, t: Tensor) -> Tensor:
-        if self.shape != t.shape:
-            raise ValueError("Shape mismatch. Requires matching shapes.")
-
-        return Tensor(ops.add(self.data, t.data), shape=self.shape)
+        left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
+        return Tensor(ops.add(left, right), shape=shape)
 
     def __sub__(self, t: Tensor) -> Tensor:
-        if self.shape != t.shape:
-            raise ValueError("Shape mismatch. Requires matching shapes.")
-
-        return Tensor(ops.sub(self.data, t.data), shape=self.shape)
+        left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
+        return Tensor(ops.sub(left, right), shape=shape)
 
     def __abs__(self) -> Tensor:
         return Tensor(ops.absolute(self.data), shape=self.shape)
@@ -123,16 +118,12 @@ class Tensor:
         return Tensor(ops.power(self.data, exponent), shape=self.shape)
 
     def __truediv__(self, t: Tensor) -> Tensor:
-        if self.shape != t.shape:
-            raise ValueError("Shape mismatch. Requires matching shapes.")
-
-        return Tensor(ops.div(self.data, t.data), shape=self.shape)
+        left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
+        return Tensor(ops.div(left, right), shape=shape)
 
     def __mul__(self, t: Tensor) -> Tensor:
-        if self.shape != t.shape:
-            raise ValueError("Shape mismatch. Requires matching shapes.")
-
-        return Tensor(ops.mul(self.data, t.data), shape=self.shape)
+        left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
+        return Tensor(ops.mul(left, right), shape=shape)
 
     def __matmul__(self, t: Tensor) -> Tensor:
         # inners must match
