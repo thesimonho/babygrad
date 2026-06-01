@@ -1,8 +1,8 @@
-"""Generate the mixed-target CSV dataset.
+"""Generate separate synthetic target CSV datasets.
 
 The generated rows have four numeric inputs, one categorical target, and one
-continuous target. The formulas are intentionally simple so the dataset is easy
-to inspect while building forward-only network code.
+continuous target. The formulas are intentionally simple so the datasets are
+easy to inspect while building forward-only network code.
 """
 
 from __future__ import annotations
@@ -11,7 +11,8 @@ import csv
 import random
 from pathlib import Path
 
-OUTPUT_PATH = Path(__file__).with_name("mixed_targets.csv")
+CATEGORICAL_OUTPUT_PATH = Path(__file__).with_name("categorical_targets.csv")
+CONTINUOUS_OUTPUT_PATH = Path(__file__).with_name("continuous_targets.csv")
 ROW_COUNT = 60
 SEED = 7
 
@@ -47,17 +48,40 @@ def build_row(index: int, random_number_generator: random.Random) -> dict[str, o
     }
 
 
-def main() -> None:
-    """Write the mixed-target dataset to disk."""
-    random_number_generator = random.Random(SEED)
-    fieldnames = ["x1", "x2", "x3", "x4", "category_target", "continuous_target"]
-
-    with OUTPUT_PATH.open("w", newline="") as output_file:
-        writer = csv.DictWriter(output_file, fieldnames=fieldnames)
+def write_rows(
+    output_path: Path,
+    fieldnames: list[str],
+    rows: list[dict[str, object]],
+) -> None:
+    """Write selected row fields to one CSV file."""
+    with output_path.open("w", newline="") as output_file:
+        writer = csv.DictWriter(
+            output_file,
+            fieldnames=fieldnames,
+            lineterminator="\n",
+        )
         writer.writeheader()
 
-        for index in range(ROW_COUNT):
-            writer.writerow(build_row(index, random_number_generator))
+        for row in rows:
+            writer.writerow({fieldname: row[fieldname] for fieldname in fieldnames})
+
+
+def main() -> None:
+    """Write one categorical and one continuous target dataset to disk."""
+    random_number_generator = random.Random(SEED)
+    rows = [build_row(index, random_number_generator) for index in range(ROW_COUNT)]
+    input_fieldnames = ["x1", "x2", "x3", "x4"]
+
+    write_rows(
+        CATEGORICAL_OUTPUT_PATH,
+        [*input_fieldnames, "category_target"],
+        rows,
+    )
+    write_rows(
+        CONTINUOUS_OUTPUT_PATH,
+        [*input_fieldnames, "continuous_target"],
+        rows,
+    )
 
 
 if __name__ == "__main__":
