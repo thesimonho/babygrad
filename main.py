@@ -7,6 +7,7 @@ from babygrad.data import (
 
 def main():
     dataset = load_csv(Path("./data/iris.csv"))
+    dataset.one_hot = True
     dataset.target_col_idx = 4
     splits = prepare_supervised_data(dataset)
 
