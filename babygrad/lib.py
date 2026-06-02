@@ -113,3 +113,53 @@ def _expand_dims(
         output = temp
 
     return output
+
+
+def _coordinate_to_index(shape: aliases.Shape, coordinate: tuple[int, ...]) -> int:
+    """
+    Convert a tensor coordinate to the correct index location in a flat data list.
+    Example: coordinate(0,0) -> list[0], coordinate(0,1) -> list[1]
+    """
+    if len(shape) != len(coordinate):
+        raise ValueError("Target coordinate does not match target shape")
+
+    for i in range(len(shape)):
+        if coordinate[i] >= shape[i] or coordinate[i] < 0:
+            raise IndexError("Index out of bounds for target shape")
+
+    idx = 0
+    for i, c in enumerate(coordinate):
+        idx += c * math.prod(shape[i + 1 :])
+
+    return idx
+
+
+def _index_to_coordinate(shape: aliases.Shape, index: int) -> tuple[int, ...]:
+    """
+    Convert a list index to a tensor coordinate given a specific shape.
+    Example: list[0] -> coordinate(0,0)
+    """
+    if math.prod(shape) <= index or index < 0:
+        raise IndexError(f"Target index out of bounds for shape {shape}")
+
+    total = 0
+    coordinates = []
+    for i, dim in enumerate(shape):
+        dim_idx = 0
+        # this loop is just checking how many times the chunk can fit in before the index. div+remainder will achieve the same thing as this inner loop
+        for idx in range(1, dim + 1):
+            chunk_size = math.prod(shape[i + 1 :])
+            if total + chunk_size > index:
+                break
+            total += chunk_size
+            dim_idx = idx
+        coordinates.append(dim_idx)
+
+    return tuple(coordinates)
+
+
+def _get_axis_groups(shape: aliases.Shape, axis: int):
+    """
+    Return a list of lists of flat indexes for each item index that below the given axis.
+    """
+    pass
