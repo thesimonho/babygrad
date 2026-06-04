@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 
 from . import aliases, ops, lib
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 from . import text as text_module
 
@@ -17,6 +17,10 @@ class Tensor:
 
     Row major order: [row1, row2, row3, ...]
     Last 2 indices are (..., row, col)
+
+    Compute ops return rank = max of input ranks. (Covers elementwise, broadcast, matmul, and reductions: one input, max = its own rank, preserved.)
+
+    Shape ops change rank — that's what they're for (reshape, flatten, indexing.)
     """
 
     @property
@@ -174,14 +178,24 @@ class Tensor:
     def t(self):
         return self.transpose()
 
-    def sum(self):
+    def sum(self, axis: Optional[int] = None):
+        if axis is not None:
+            shape = list(self.shape)
+            shape[axis] = 1
+
+            groups = lib._get_axis_groups(self.shape, axis=axis)
+            return Tensor(
+                [ops.reduce_sum([self.data[i] for i in group]) for group in groups],
+                shape=tuple(shape),
+            )
+
         return Tensor([ops.reduce_sum(self.data)], shape=(1,))
 
-    def mean(self):
+    def mean(self, axis: Optional[int] = None):
         return Tensor([ops.reduce_mean(self.data)], shape=(1,))
 
-    def max(self):
+    def max(self, axis: Optional[int] = None):
         return Tensor([ops.reduce_max(self.data)], shape=(1,))
 
-    def min(self):
+    def min(self, axis: Optional[int] = None):
         return Tensor([ops.reduce_min(self.data)], shape=(1,))
