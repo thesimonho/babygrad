@@ -1,6 +1,11 @@
 import pytest
 import math
-from babygrad.lib import broadcast, _coordinate_to_index, _index_to_coordinate
+from babygrad.lib import (
+    broadcast,
+    _coordinate_to_index,
+    _index_to_coordinate,
+    _get_axis_groups,
+)
 
 
 def test_broadcast_same():
@@ -133,8 +138,34 @@ def test_index_coordinate_invalid():
 
 
 def test_get_axis_groups():
-    pass
+    shape = (2, 3)
+    axis = 0
+    res = _get_axis_groups(shape, axis)
+    assert res == [[0, 3], [1, 4], [2, 5]]
+
+    axis = 1
+    res = _get_axis_groups(shape, axis)
+    assert res == [[0, 1, 2], [3, 4, 5]]
+
+
+def test_get_axis_groups_3d():
+    shape = (2, 2, 2)
+    axis = 1
+    res = _get_axis_groups(shape, axis)
+    assert res == [[0, 2], [1, 3], [4, 6], [5, 7]]
+
+
+def test_get_axis_groups_square():
+    shape = (3, 3)
+    axis = 0
+    res = _get_axis_groups(shape, axis)
+    assert res == [[0, 3, 6], [1, 4, 7], [2, 5, 8]]
+
+    axis = 1
+    res = _get_axis_groups(shape, axis)
+    assert res == [[0, 1, 2], [3, 4, 5], [6, 7, 8]]
 
 
 def test_get_axis_groups_invalid():
-    pass
+    with pytest.raises(IndexError):
+        _get_axis_groups((1, 1), 2)

@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from . import aliases
 import math
 
@@ -129,7 +131,8 @@ def _coordinate_to_index(shape: aliases.Shape, coordinate: tuple[int, ...]) -> i
 
     idx = 0
     for i, c in enumerate(coordinate):
-        idx += c * math.prod(shape[i + 1 :])
+        stride = math.prod(shape[i + 1 :])
+        idx += c * stride
 
     return idx
 
@@ -148,18 +151,60 @@ def _index_to_coordinate(shape: aliases.Shape, index: int) -> tuple[int, ...]:
         dim_idx = 0
         # this loop is just checking how many times the chunk can fit in before the index. div+remainder will achieve the same thing as this inner loop
         for idx in range(1, dim + 1):
-            chunk_size = math.prod(shape[i + 1 :])
-            if total + chunk_size > index:
+            stride = math.prod(shape[i + 1 :])
+            if total + stride > index:
                 break
-            total += chunk_size
+            total += stride
             dim_idx = idx
         coordinates.append(dim_idx)
 
     return tuple(coordinates)
 
 
+def _get_axis_groups_old(shape: aliases.Shape, axis: int):
+    """Deprecated. Kept here for learning purposes.
+    Return a list of lists of flat indexes that would be reduced together.
+    Original implementation using loops and no index/coordinate helper
+    """
+    if axis >= len(shape):
+        raise IndexError("Axis out of bounds for shape")
+
+    stride = math.prod(shape[axis + 1 :])
+
+    idx = 0
+    groups = defaultdict(list)
+    for p in range(math.prod(shape[:axis])):
+        for _ in range(shape[axis]):
+            for c in range(stride):
+                groups[(p, c)].append(idx)
+                idx += 1
+
+    assert idx == math.prod(shape)
+    return list(groups.values())
+
+
 def _get_axis_groups(shape: aliases.Shape, axis: int):
     """
-    Return a list of lists of flat indexes for each item index that below the given axis.
+    Return a list of lists of flat indexes that would be reduced together.
+    Reduction consumes/collapses the specified axis and it disappears entirely.
+
+    X = [
+    1 2 3
+    4 5 6
+    ]
+    shape = (2,3)
+    axis = 0
+    groups = [[0,3],[1,4],[2,5]]
+    axis = 1
+    groups = [[0,1,2],[3,4,5]]
     """
-    pass
+    if axis >= len(shape):
+        raise IndexError("Axis out of bounds for shape")
+
+    output = defaultdict(list)
+    for idx in range(math.prod(shape)):
+        coord = _index_to_coordinate(shape, idx)
+        key = tuple(c for i, c in enumerate(coord) if i != axis)
+        output[key].append(idx)
+
+    return list(output.values())
