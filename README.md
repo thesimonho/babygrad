@@ -55,9 +55,9 @@ The project builds up incrementally from raw tensor operations to a modern trans
 ### Phase 2: Forward Neural Network Primitives
 
 - [x] **Linear layer** — weights, biases, forward values
-- [x] **Activation functions** — sigmoid, tanh, ReLU forward values
+- [x] **Activation functions** — ReLU and softmax forward values
 - [x] **Sequential model** — run ordered layers from input tensor to `y_pred`
-- [ ] **Loss functions** — MSE, cross-entropy loss values
+- [x] **Loss functions** — MSE, cross-entropy loss values
 
 ### Phase 3: Autograd
 

@@ -1,6 +1,6 @@
 from pathlib import Path
 from babygrad.data import load_csv, prepare_supervised_data
-from babygrad.nn import ReLU, Sequential, Linear, Softmax
+from babygrad.nn import CCE, ReLU, Sequential, Linear, Softmax
 from babygrad.plot import histogram
 
 
@@ -20,6 +20,8 @@ def train_iris():
     )
     y_pred, weights = model.forward(splits.x_train, plot=True)
     print(y_pred)
+    loss = CCE(splits.y_train, y_pred)
+    print(loss)
 
     if weights:
         histogram(weights, "iris_weights.png")

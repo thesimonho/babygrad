@@ -69,3 +69,17 @@ class Softmax(Layer):
         z = input - input.max(axis=1)
         row = z.exp() / z.exp().sum(axis=1)
         return row
+
+
+def CCE(y_true: Tensor, y_pred: Tensor):
+    """
+    Categorical cross-entropy for one hot targets
+    """
+    return -(y_true * y_pred.log()).sum(axis=1).mean()
+
+
+def MSE(y_true: Tensor, y_pred: Tensor):
+    """
+    Mean squared error for scalar targets
+    """
+    return ((y_true - y_pred) ** 2).mean()
