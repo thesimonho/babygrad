@@ -1,13 +1,20 @@
 # babygrad
 
-A neural network library built from scratch in pure Python. No NumPy. No PyTorch. No dependencies.
+A small neural network library built from scratch in pure Python. No NumPy. No PyTorch. No dependencies. Just for fun.
 
-The project builds up incrementally from raw tensor operations to a modern transformer, where each step depends on and extends what came before.
+The project builds up incrementally from raw tensor operations, where each step depends on and extends what came before.
+
+Designed to be a lightweight learning tool that's easy to play around with.
+
+> [!CAUTION]
+> Not intended for production. Expect it to be slow - no C, no GPU.
 
 ## Rules
 
 - **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here.
-- **Every operation must be understood before it's implemented.** No copying reference code.
+  - A few minor exceptions for things like matplotlib
+
+- **Every operation must be understood before it's implemented.** No copying reference code. No AI implementation.
 
 ## Roadmap
 
@@ -18,33 +25,33 @@ The project builds up incrementally from raw tensor operations to a modern trans
 - [x] **Tensor data structure** — storage, shape, indexing, and size metadata
   - [x] Flat storage
   - [x] Shape
-  - [x] Rank / dimension count\*
-  - [x] Element count\*
+  - [x] Rank / dimension count
+  - [x] Element count
   - [x] Basic indexing and offset calculation
 - [x] **Element-wise operations** — per-value unary and binary operations
   - [x] Add
   - [x] Subtract
   - [x] Multiply
   - [x] Divide
-  - [x] Negate\*
-  - [x] Exp\*
-  - [x] Log\*
-  - [x] Sqrt\*
-  - [x] Power\*
+  - [x] Negate
+  - [x] Exp
+  - [x] Log
+  - [x] Sqrt
+  - [x] Power
 - [x] **Reduction operations** — operations that collapse one or more axes
   - [x] Sum
-  - [x] Max\*
-  - [x] Mean\*
+  - [x] Max
+  - [x] Mean
 - [x] **Shape manipulation** — changing how tensor data is arranged or viewed
   - [x] Reshape
   - [x] Transpose
-  - [x] Flatten\*
+  - [x] Flatten
   - [ ] Permute / swap axes\*
   - [x] View vs copy semantics\* (copy is done)
 - [x] **Broadcasting** — shape alignment and expansion rules
   - [x] Scalar broadcasting
-  - [x] Singleton-dimension broadcasting\*
-  - [ ] Full NumPy-style broadcasting\* (optional at first)
+  - [x] Singleton-dimension broadcasting
+  - [ ] Full NumPy-style broadcasting\*
 - [x] **Matrix multiplication** — the core compute primitive
   - [x] Vector dot product
   - [x] Matrix-vector multiplication
