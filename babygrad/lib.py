@@ -1,4 +1,5 @@
 from collections import defaultdict
+from warnings import deprecated
 
 from . import aliases
 import math
@@ -161,11 +162,8 @@ def _index_to_coordinate(shape: aliases.Shape, index: int) -> tuple[int, ...]:
     return tuple(coordinates)
 
 
+@deprecated("Use _get_axis_groups instead. Kept here for learning purposes.")
 def _get_axis_groups_old(shape: aliases.Shape, axis: int):
-    """Deprecated. Kept here for learning purposes.
-    Return a list of lists of flat indexes that would be reduced together.
-    Original implementation using loops and no index/coordinate helper
-    """
     if axis >= len(shape):
         raise IndexError("Axis out of bounds for shape")
 
