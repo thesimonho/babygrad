@@ -178,24 +178,27 @@ class Tensor:
     def t(self):
         return self.transpose()
 
-    def sum(self, axis: Optional[int] = None):
+    def _reduce(self, op, axis):
         if axis is not None:
-            shape = list(self.shape)
-            shape[axis] = 1
-
             groups = lib._get_axis_groups(self.shape, axis=axis)
+            shape = tuple(1 if i == axis else x for i, x in enumerate(self.shape))
             return Tensor(
-                [ops.reduce_sum([self.data[i] for i in group]) for group in groups],
+                [op([self.data[i] for i in group]) for group in groups],
                 shape=tuple(shape),
             )
+        else:
+            shape = tuple(1 for _ in range(len(self.shape)))
 
-        return Tensor([ops.reduce_sum(self.data)], shape=(1,))
+        return Tensor([op(self.data)], shape=shape)
+
+    def sum(self, axis: Optional[int] = None):
+        return self._reduce(ops.reduce_sum, axis)
 
     def mean(self, axis: Optional[int] = None):
-        return Tensor([ops.reduce_mean(self.data)], shape=(1,))
+        return self._reduce(ops.reduce_mean, axis)
 
     def max(self, axis: Optional[int] = None):
-        return Tensor([ops.reduce_max(self.data)], shape=(1,))
+        return self._reduce(ops.reduce_max, axis)
 
     def min(self, axis: Optional[int] = None):
-        return Tensor([ops.reduce_min(self.data)], shape=(1,))
+        return self._reduce(ops.reduce_min, axis)

@@ -21,10 +21,10 @@ def test_unary_ops():
 
 def test_reduce_ops():
     t = Tensor([1, 2, -3, -4], shape=(2, 2))
-    assert t.sum() == Tensor([-4], shape=(1,))
-    assert t.mean() == Tensor([-1], shape=(1,))
-    assert t.max() == Tensor([2], shape=(1,))
-    assert t.min() == Tensor([-4], shape=(1,))
+    assert t.sum() == Tensor([-4], shape=(1, 1))
+    assert t.mean() == Tensor([-1], shape=(1, 1))
+    assert t.max() == Tensor([2], shape=(1, 1))
+    assert t.min() == Tensor([-4], shape=(1, 1))
 
 
 def test_getitem_1d_scalar():

@@ -184,7 +184,6 @@ def _get_axis_groups_old(shape: aliases.Shape, axis: int):
 def _get_axis_groups(shape: aliases.Shape, axis: int):
     """
     Return a list of lists of flat indexes that would be reduced together.
-    Reduction consumes/collapses the specified axis and it disappears entirely.
 
     X = [
     1 2 3
@@ -198,6 +197,8 @@ def _get_axis_groups(shape: aliases.Shape, axis: int):
     """
     if axis >= len(shape):
         raise IndexError("Axis out of bounds for shape")
+    if axis < 0:
+        raise NotImplementedError("Negative axis not implemented")
 
     output = defaultdict(list)
     for idx in range(math.prod(shape)):
