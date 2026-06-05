@@ -1,13 +1,12 @@
-# babygrad
-
+<img width="100%" alt="babygrad" src="https://github.com/user-attachments/assets/8cd5c3a1-912c-46c4-9d8c-8c47bc703f8e" />
 A small neural network library built from scratch in pure Python. No NumPy. No PyTorch. No dependencies. Just for fun.
 
 The project builds up incrementally from raw tensor operations, where each step depends on and extends what came before.
 
-Designed to be a lightweight learning tool that's easy to play around with.
+Designed to be a lightweight learning tool that's easy to mess around with.
 
 > [!CAUTION]
-> Not intended for production. Expect it to be slow - no C, no GPU.
+> Not intended for serious usage. Expect it to be slow - no C, no GPU.
 
 ## Rules
 
