@@ -76,6 +76,11 @@ class Tensor:
         elif isinstance(key, tuple):
             norm_key = key
 
+        # normalize negative indices
+        norm_key = tuple(
+            k if k >= 0 else (self.shape[i] + k) for i, k in enumerate(norm_key)
+        )
+
         if len(norm_key) == 2 and self.ndim == 2:
             row = norm_key[0]
             col = norm_key[1]
@@ -180,6 +185,10 @@ class Tensor:
 
     def _reduce(self, op, axis):
         if axis is not None:
+            # normalize negative axis
+            if axis < 0:
+                axis = self.ndim + axis
+
             groups = lib._get_axis_groups(self.shape, axis=axis)
             shape = tuple(1 if i == axis else x for i, x in enumerate(self.shape))
             return Tensor(

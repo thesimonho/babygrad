@@ -196,3 +196,16 @@ def test_axis_reduction():
     t = Tensor([1, 2, 3, 4, 5, 6], (6,))
     assert t.sum().shape == (1,)
     assert t.sum(axis=0).shape == (1,)
+
+
+def test_axis_reduce_negative_axis_2d():
+    t = Tensor([1, 2, 3, 4, 5, 6], (2, 3))
+
+    assert t.sum(axis=-1) == Tensor([6, 15], shape=(2, 1))
+    assert t.sum(axis=-2) == Tensor([5, 7, 9], shape=(1, 3))
+
+
+def test_axis_reduce_negative_axis_3d():
+    t = Tensor([1, 2, 3, 4, 5, 6, 7, 8], (2, 2, 2))
+
+    assert t.sum(axis=-1) == Tensor([3, 7, 11, 15], shape=(2, 2, 1))

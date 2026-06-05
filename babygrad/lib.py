@@ -197,8 +197,6 @@ def _get_axis_groups(shape: aliases.Shape, axis: int):
     """
     if axis >= len(shape):
         raise IndexError("Axis out of bounds for shape")
-    if axis < 0:
-        raise NotImplementedError("Negative axis not implemented")
 
     output = defaultdict(list)
     for idx in range(math.prod(shape)):
