@@ -63,6 +63,9 @@ class ReLU(Layer):
 
 class Softmax(Layer):
     def forward(self, input: Tensor):
-        #  softmax(zi) = exp(zi) / sum(exp(zj) for every class j)
-        #  softmax row = exp(row - row_max) / sum(exp(row - row_max))
-        return input
+        """
+        softmax row = exp(row - row_max) / sum(exp(row - row_max))
+        """
+        z = input - input.max(axis=1)
+        row = z.exp() / z.exp().sum(axis=1)
+        return row
