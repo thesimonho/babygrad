@@ -9,8 +9,8 @@ on:
 permissions:
   contents: read
 jobs:
-  tests:
-    name: Pytest
+  verify:
+    name: Verify Python
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,5 +26,9 @@ jobs:
           python-version: "3.14"
       - name: Install dependencies
         run: uv sync --locked --dev
+      - name: Run lint
+        run: uv run ruff check babygrad tests
+      - name: Run typecheck
+        run: uv run pyright
       - name: Run tests
         run: uv run pytest
