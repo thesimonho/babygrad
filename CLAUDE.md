@@ -42,7 +42,7 @@ The user owns the core implementation, algorithm, and design decisions. The agen
 
 - **Zero external dependencies.** Python standard library only. No NumPy, no PyTorch, no pip packages.
 - **Pure Python.** No C extensions, no GPU, no ctypes.
-- **Python 3.12+** can be assumed.
+- **Python 3.14** can be assumed.
 
 ## Architecture notes
 
