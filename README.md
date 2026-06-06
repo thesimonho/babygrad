@@ -3,15 +3,14 @@ A small neural network library built from scratch in pure Python. No NumPy. No P
 
 The project builds up incrementally from raw tensor operations, where each step depends on and extends what came before.
 
-Designed to be a lightweight learning tool that's easy to mess around with.
+Designed to be a lightweight learning project that's easy to mess around with.
 
 > [!CAUTION]
 > Not intended for serious usage. Expect it to be slow - no C, no GPU.
 
 ## Rules
 
-- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here.
-  - A few minor exceptions for things like matplotlib
+- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here (a few minor exceptions for things like matplotlib)
 
 - **Every operation must be understood before it's implemented.** No copying reference code. No AI implementation.
 
@@ -21,42 +20,71 @@ Designed to be a lightweight learning tool that's easy to mess around with.
 
 `*` = useful later, but not required before building forward-only layers.
 
-- [x] **Tensor data structure** — storage, shape, indexing, and size metadata
-  - [x] Flat storage
-  - [x] Shape
-  - [x] Rank / dimension count
-  - [x] Element count
-  - [x] Basic indexing and offset calculation
-- [x] **Element-wise operations** — per-value unary and binary operations
-  - [x] Add
-  - [x] Subtract
-  - [x] Multiply
-  - [x] Divide
-  - [x] Negate
-  - [x] Exp
-  - [x] Log
-  - [x] Sqrt
-  - [x] Power
-- [x] **Reduction operations** — operations that collapse one or more axes
-  - [x] Sum
-  - [x] Max
-  - [x] Mean
-- [x] **Shape manipulation** — changing how tensor data is arranged or viewed
-  - [x] Reshape
-  - [x] Transpose
-  - [x] Flatten
-  - [ ] Permute / swap axes\*
-  - [x] View vs copy semantics\* (copy is done)
-- [x] **Broadcasting** — shape alignment and expansion rules
-  - [x] Scalar broadcasting
-  - [x] Singleton-dimension broadcasting
-  - [ ] Full NumPy-style broadcasting\*
-- [x] **Matrix multiplication** — the core compute primitive
-  - [x] Vector dot product
-  - [x] Matrix-vector multiplication
-  - [x] Vector-matrix multiplication
-  - [x] Matrix-matrix multiplication
-  - [ ] Batched matrix multiplication\*
+<details>
+<summary><strong>Tensor data structure</strong> — storage, shape, indexing, and size metadata</summary>
+
+- [x] Flat storage
+- [x] Shape
+- [x] Rank / dimension count
+- [x] Element count
+- [x] Basic indexing and offset calculation
+
+</details>
+
+<details>
+<summary><strong>Element-wise operations</strong> — per-value unary and binary operations</summary>
+
+- [x] Add
+- [x] Subtract
+- [x] Multiply
+- [x] Divide
+- [x] Negate
+- [x] Exp
+- [x] Log
+- [x] Sqrt
+- [x] Power
+
+</details>
+
+<details>
+<summary><strong>Reduction operations</strong> — operations that collapse one or more axes</summary>
+
+- [x] Sum
+- [x] Max
+- [x] Mean
+
+</details>
+
+<details open>
+<summary><strong>Shape manipulation</strong> — changing how tensor data is arranged or viewed</summary>
+
+- [x] Reshape
+- [x] Transpose
+- [x] Flatten
+- [ ] Permute / swap axes\*
+- [x] View vs copy semantics\* (copy is done)
+
+</details>
+
+<details open>
+<summary><strong>Broadcasting</strong> — shape alignment and expansion rules</summary>
+
+- [x] Scalar broadcasting
+- [x] Singleton-dimension broadcasting
+- [ ] Full NumPy-style broadcasting\*
+
+</details>
+
+<details open>
+<summary><strong>Matrix multiplication</strong> — the core compute primitive</summary>
+
+- [x] Vector dot product
+- [x] Matrix-vector multiplication
+- [x] Vector-matrix multiplication
+- [x] Matrix-matrix multiplication
+- [ ] Batched matrix multiplication\*
+
+</details>
 
 ### Phase 2: Forward Neural Network Primitives
 
@@ -67,22 +95,27 @@ Designed to be a lightweight learning tool that's easy to mess around with.
 
 ### Phase 3: Autograd
 
-- [ ] **Computational graph** — tracking operations as a DAG of nodes
-  - [x] add
-  - [ ] sub
-  - [ ] neg
-  - [ ] mul
-  - [ ] pow
-  - [ ] sum
-  - [ ] mean
-  - [ ] matmul
-  - [ ] transpose
-  - [ ] exp
-  - [ ] log
-  - [ ] div
-  - [ ] relu
-  - [ ] max
-  - [ ] softmax
+<details open>
+<summary><strong>Computational graph</strong> — tracking operations as a DAG of nodes</summary>
+
+- [x] add
+- [ ] sub
+- [ ] neg
+- [ ] mul
+- [ ] pow
+- [ ] sum
+- [ ] mean
+- [ ] matmul
+- [ ] transpose
+- [ ] exp
+- [ ] log
+- [ ] div
+- [ ] relu
+- [ ] max
+- [ ] softmax
+
+</details>
+
 - [ ] **Backward pass** — reverse-mode autodiff, chain rule
 - [ ] **Gradient accumulation** — handling multi-use tensors
 
@@ -93,7 +126,7 @@ Designed to be a lightweight learning tool that's easy to mess around with.
 
 ### Phase 5: Going Deeper
 
-- [ ] **Multi-layer perceptron** — stacking linear + activation layers
+- [x] **Multi-layer perceptron** — stacking linear + activation layers
 - [ ] **Vanishing gradients** — observing the problem firsthand with deep stacks
 - [ ] **Weight initialization** — Xavier/Glorot, He
   - [Understanding the difficulty of training deep feedforward neural networks](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) — Glorot & Bengio, 2010
