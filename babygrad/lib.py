@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Callable
 from warnings import deprecated
 
 from . import aliases
@@ -39,7 +40,7 @@ def broadcast(
 
     max_ndims = max(len(left_shape), len(right_shape))
 
-    # padd shape lengths and check that all indices can be broadcast
+    # pad shape lengths and check that all indices can be broadcast
     output_shape = []
     for i in range(-1, -max_ndims - 1, -1):
         try:
@@ -79,13 +80,8 @@ def _expand_dims(
     """
     assert len(data) == math.prod(current_shape)
 
-    # pad the indices first for simplicity
-    current_reshaped = []
-    for t_idx in range(-1, -len(target_shape) - 1, -1):
-        try:
-            current_reshaped.insert(0, current_shape[t_idx])
-        except IndexError:
-            current_reshaped.insert(0, 1)
+    # pad the axes first for simplicity
+    current_reshaped = _pad_shape_to_rank(current_shape, target_shape)
 
     # guard: broadcasting must be valid
     for c, t in zip(current_reshaped, target_shape):
@@ -116,6 +112,24 @@ def _expand_dims(
         output = temp
 
     return output
+
+
+def _pad_shape_to_rank(current: aliases.Shape, target: aliases.Shape) -> aliases.Shape:
+    """
+    Left pad a shape to the same rank as a target shape.
+    Example:
+    current = (3,)
+    target = (1,1)
+    Pad current to match target rank will return (1,3)
+    """
+    padded = []
+    for idx in range(-1, -len(target) - 1, -1):
+        try:
+            padded.insert(0, current[idx])
+        except IndexError:
+            padded.insert(0, 1)
+
+    return tuple(padded)
 
 
 def _coordinate_to_index(shape: aliases.Shape, coordinate: tuple[int, ...]) -> int:

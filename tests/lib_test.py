@@ -2,6 +2,7 @@ import pytest
 import math
 from babygrad.lib import (
     broadcast,
+    _pad_shape_to_rank,
     _coordinate_to_index,
     _index_to_coordinate,
     _get_axis_groups,
@@ -59,6 +60,21 @@ def test_broadcast_2d():
 def test_broadcast_invalid():
     with pytest.raises(ValueError):
         broadcast([1, 2, 3, 4, 5, 6], [1, 1], (2, 3), (2,))
+
+
+
+def test_pad_shape():
+    current = (3,)
+    target = (5, 1)
+
+    padded = _pad_shape_to_rank(current, target)
+    assert padded == (1, 3)
+
+    current = (1, 3)
+    target = (5, 1)
+
+    padded = _pad_shape_to_rank(current, target)
+    assert padded == (1, 3)
 
 
 def test_coordinate_index():
