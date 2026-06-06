@@ -11,7 +11,7 @@ from typing import Callable, Optional, Union
 class BackpropMetadata:
     op: str
     parents: list[Tensor]
-    backward: Callable
+    propagate_to_parents: Callable
 
 
 class Tensor:
@@ -77,7 +77,7 @@ class Tensor:
             "each parent must have a gradient update rule"
         )
 
-        def backward():
+        def propagate():
             for parent, rule in zip(parents, gradient_rules):
                 output_shaped_grad = []
                 for i in range(len(output.grad)):
@@ -92,7 +92,9 @@ class Tensor:
                 for j in range(len(parent.grad)):
                     parent.grad[j] += parent_shaped_grad[j]
 
-        output.backprop = BackpropMetadata(op=label, parents=parents, backward=backward)
+        output.backprop = BackpropMetadata(
+            op=label, parents=parents, propagate_to_parents=propagate
+        )
         return output
 
     def __eq__(self, t):
@@ -260,4 +262,30 @@ class Tensor:
         return self._reduce(ops.reduce_min, axis)
 
     def backward(self):
-        pass
+        """
+        Start backprop. Called once on the loss tensor.
+        """
+        # seed gradient for the root/loss tensor at the start of backprop
+        self.grad = [1.0 for _ in self.grad]
+
+        # track which tensors have been visited so we dont call propagate multiple times
+        # for tensors that are reused.
+        visited = set()
+
+        self._backward_walk(visited)
+
+    def _backward_walk(self, visited: set[int]):
+        """
+        Pass the current gradient back to parents to accumulate the gradients. Visit each parent and walk recursively.
+        """
+        if self.backprop is None:
+            return
+
+        if id(self) in visited:
+            return
+
+        self.backprop.propagate_to_parents()
+        visited.add(id(self))
+
+        for p in self.backprop.parents:
+            p._backward_walk(visited)

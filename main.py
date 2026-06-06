@@ -22,6 +22,7 @@ def train_iris():
     print(y_pred)
     loss = CCE(splits.y_train, y_pred)
     print(loss)
+    loss.backward()
 
     if weights:
         histogram(weights, "iris_weights.png")

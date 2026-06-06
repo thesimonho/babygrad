@@ -100,7 +100,7 @@ def test_add_backprop_updates_parent():
 
     assert output.backprop is not None
     output.grad = [1.0, 1.0]
-    output.backprop.backward()
+    output.backprop.propagate_to_parents()
 
     assert left.grad == [1.0, 1.0]
     assert right.grad == [1.0, 1.0]
@@ -113,7 +113,7 @@ def test_add_backprop_unbroadcasts_parent():
 
     assert output.backprop is not None
     output.grad = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-    output.backprop.backward()
+    output.backprop.propagate_to_parents()
 
     assert left.grad == [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
     assert right.grad == [2.0, 2.0, 2.0]
@@ -134,6 +134,21 @@ def test_backward_walks_simple_graph():
     assert left.grad == [1.0]
     assert right.grad == [1.0]
     assert final_right.grad == [1.0]
+
+
+def test_backward_accumulate_then_propagate():
+    left = Tensor([1.0], shape=(1,))
+    right = Tensor([2.0], shape=(1,))
+
+    partial_output = left + right
+    final_output = partial_output + partial_output
+
+    final_output.backward()
+
+    assert final_output.grad == [1.0]
+    assert partial_output.grad == [2.0]
+    assert left.grad == [2.0]
+    assert right.grad == [2.0]
 
 
 def test_sub_vector_vector():

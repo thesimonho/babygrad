@@ -115,9 +115,8 @@ Designed to be a lightweight learning project that's easy to mess around with.
 - [ ] softmax
 
 </details>
-
-- [ ] **Backward pass** — reverse-mode autodiff, chain rule
-- [ ] **Gradient accumulation** — handling multi-use tensors
+- [x] **Backward pass** — reverse-mode autodiff graph walk
+- [x] **Gradient accumulation** — multi-use tensors propagate once after accumulating
 
 ### Phase 4: Training
 
