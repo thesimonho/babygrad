@@ -3,7 +3,7 @@ import random
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from . import text, tensor
+from . import formatting, tensor
 
 
 @dataclass
@@ -27,7 +27,7 @@ class Dataset:
 
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the dataset rows."""
-        return f"{self.nrow} rows x {self.ncol} cols\n{text.matrix(self.flat_rows(), self.nrow, self.ncol, self.headers)}"
+        return f"{self.nrow} rows x {self.ncol} cols\n{formatting.matrix(self.flat_rows(), self.nrow, self.ncol, self.headers)}"
 
     def flat_rows(self) -> list:
         """Return the nested rows as one row-major list."""

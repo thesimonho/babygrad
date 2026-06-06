@@ -3,13 +3,8 @@ from dataclasses import dataclass
 
 import math
 
-from . import aliases, ops, lib
-from typing import Any, Callable, Optional, cast, Union
-
-from . import text as text_module
-
-
-text = cast(Any, text_module)
+from . import aliases, ops, lib, formatting
+from typing import Callable, Optional, Union
 
 
 @dataclass
@@ -66,10 +61,10 @@ class Tensor:
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the tensor contents."""
         if self.ndim == 1:
-            return f"{self.shape[0]} items\n{text.vector(self.data)}"
+            return f"{self.shape[0]} items\n{formatting.vector(self.data)}"
         if self.ndim != 2:
-            return f"shape={self.shape}\n{text.vector(self.data)}"
-        return f"{self.nrow} rows x {self.ncol} cols\n{text.matrix(self.data, self.nrow, self.ncol)}"
+            return f"shape={self.shape}\n{formatting.vector(self.data)}"
+        return f"{self.nrow} rows x {self.ncol} cols\n{formatting.matrix(self.data, self.nrow, self.ncol)}"
 
     def _inject_backprop_metadata(
         self,
