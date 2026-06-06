@@ -68,6 +68,21 @@ Designed to be a lightweight learning tool that's easy to mess around with.
 ### Phase 3: Autograd
 
 - [ ] **Computational graph** — tracking operations as a DAG of nodes
+  - [x] add
+  - [ ] sub
+  - [ ] neg
+  - [ ] mul
+  - [ ] pow
+  - [ ] sum
+  - [ ] mean
+  - [ ] matmul
+  - [ ] transpose
+  - [ ] exp
+  - [ ] log
+  - [ ] div
+  - [ ] relu
+  - [ ] max
+  - [ ] softmax
 - [ ] **Backward pass** — reverse-mode autodiff, chain rule
 - [ ] **Gradient accumulation** — handling multi-use tensors
 

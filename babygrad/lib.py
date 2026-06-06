@@ -70,13 +70,48 @@ def broadcast(
     return (output_left, output_right, tuple(output_shape))
 
 
+def unbroadcast(
+    data: list[aliases.Number],
+    current: aliases.Shape,
+    target: aliases.Shape,
+    op: Callable = sum,
+) -> list[aliases.Number]:
+    """
+    Unbroadcast current data to target shape.
+    Only called in tensor ops where parent broadcasting could potentially have happened.
+    """
+    assert len(data) == math.prod(current)
+    if current == target:
+        return data
+
+    if len(target) < len(current):
+        target = _pad_shape_to_rank(target, current)
+
+    output = list(data)
+    working = list(current)
+    for i in range(len(working)):
+        c = working[i]
+        t = target[i]
+
+        if c == t:
+            continue
+        if c > t:
+            groups = _get_axis_groups(tuple(working), i)
+            output = [op(output[i] for i in group) for group in groups]
+
+            # update the current working shape incase multiple axes need to update
+            working[i] = target[i]
+
+    return output
+
+
 def _expand_dims(
     data: list[aliases.Number],
     current_shape: aliases.Shape,
     target_shape: aliases.Shape,
 ) -> list[aliases.Number]:
     """
-    Expand current dimensions that are == 1.
+    Expand current dimensions that are == 1 to repeat towards a target shape.
     """
     assert len(data) == math.prod(current_shape)
 

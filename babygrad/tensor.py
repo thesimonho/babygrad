@@ -1,14 +1,22 @@
 from __future__ import annotations
+from dataclasses import dataclass
 
 import math
 
 from . import aliases, ops, lib
-from typing import Any, Optional, cast
+from typing import Any, Callable, Optional, cast, Union
 
 from . import text as text_module
 
 
 text = cast(Any, text_module)
+
+
+@dataclass
+class BackpropMetadata:
+    op: str
+    parents: list[Tensor]
+    backward: Callable
 
 
 class Tensor:
@@ -43,10 +51,17 @@ class Tensor:
     def numel(self) -> int:
         return len(self.data)
 
-    def __init__(self, data: list[aliases.Number], shape: aliases.Shape) -> None:
+    def __init__(
+        self,
+        data: list[aliases.Number],
+        shape: aliases.Shape,
+        backprop: Union[BackpropMetadata, None] = None,
+    ) -> None:
         assert len(data) == math.prod(shape), "Tensor data has incorrect shape"
         self.data = data
         self.shape = shape
+        self.grad = [0.0 for _ in self.data]
+        self.backprop = backprop
 
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the tensor contents."""
@@ -55,6 +70,35 @@ class Tensor:
         if self.ndim != 2:
             return f"shape={self.shape}\n{text.vector(self.data)}"
         return f"{self.nrow} rows x {self.ncol} cols\n{text.matrix(self.data, self.nrow, self.ncol)}"
+
+    def _inject_backprop_metadata(
+        self,
+        label: str,
+        parents: list[Tensor],
+        output: Tensor,
+        gradient_rules: list[Callable[[int, aliases.Number], aliases.Number]],
+    ) -> Tensor:
+        assert len(parents) == len(gradient_rules), (
+            "each parent must have a gradient update rule"
+        )
+
+        def backward():
+            for parent, rule in zip(parents, gradient_rules):
+                output_shaped_grad = []
+                for i in range(len(output.grad)):
+                    output_shaped_grad.append(rule(i, output.grad[i]))
+                assert len(output_shaped_grad) == len(output.grad)
+
+                # parent may have been broadcasted, so we need to undo that so indexing aligns
+                parent_shaped_grad = lib.unbroadcast(
+                    output_shaped_grad, output.shape, parent.shape
+                )
+                assert len(parent_shaped_grad) == len(parent.grad)
+                for j in range(len(parent.grad)):
+                    parent.grad[j] += parent_shaped_grad[j]
+
+        output.backprop = BackpropMetadata(op=label, parents=parents, backward=backward)
+        return output
 
     def __eq__(self, t):
         if not isinstance(t, Tensor):
@@ -111,7 +155,13 @@ class Tensor:
 
     def __add__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
-        return Tensor(ops.add(left, right), shape=shape)
+        output = Tensor(ops.add(left, right), shape=shape)
+        return self._inject_backprop_metadata(
+            label="+",
+            parents=[self, t],
+            output=output,
+            gradient_rules=[lambda _, grad: grad * 1, lambda _, grad: grad * 1],
+        )
 
     def __sub__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
@@ -183,13 +233,15 @@ class Tensor:
     def t(self):
         return self.transpose()
 
-    def _reduce(self, op, axis):
+    def _reduce(self, op: Callable, axis: Optional[int]):
         if axis is not None:
             # normalize negative axis
             if axis < 0:
                 axis = self.ndim + axis
 
             groups = lib._get_axis_groups(self.shape, axis=axis)
+
+            # set the target axis to size 1
             shape = tuple(1 if i == axis else x for i, x in enumerate(self.shape))
             return Tensor(
                 [op([self.data[i] for i in group]) for group in groups],

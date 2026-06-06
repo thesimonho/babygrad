@@ -2,6 +2,7 @@ import pytest
 import math
 from babygrad.lib import (
     broadcast,
+    unbroadcast,
     _pad_shape_to_rank,
     _coordinate_to_index,
     _index_to_coordinate,
@@ -62,6 +63,65 @@ def test_broadcast_invalid():
         broadcast([1, 2, 3, 4, 5, 6], [1, 1], (2, 3), (2,))
 
 
+def test_unbroadcast_sums_slots():
+    left, right, shape = broadcast(
+        [1, 2, 3, 4, 5, 6],
+        [10, 20, 30],
+        (2, 3),
+        (1, 3),
+    )
+    u = unbroadcast(right, shape, (1, 3))
+    assert u == [20, 40, 60]
+
+    left, right, shape = broadcast(
+        [1, 2, 3],
+        [10, 20, 30, 40],
+        (3, 1),
+        (1, 4),
+    )
+    u = unbroadcast(left, shape, (3, 1))
+    assert u == [4, 8, 12]
+
+    u = unbroadcast(right, shape, (1, 4))
+    assert u == [30, 60, 90, 120]
+
+
+def test_unbroadcast_unchanged():
+    left, right, shape = broadcast(
+        [1, 2, 3],
+        [10, 20, 30],
+        (1, 3),
+        (1, 3),
+    )
+    u = unbroadcast(left, shape, (1, 3))
+    assert u == [1, 2, 3]
+
+    u = unbroadcast(right, shape, (1, 3))
+    assert u == [10, 20, 30]
+
+
+def test_unbroadcast_pads_dimensions():
+    _, right, shape = broadcast(
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        [10.0, 20.0, 30.0],
+        (2, 3),
+        (3,),
+    )
+
+    u = unbroadcast(right, shape, (3,))
+
+    assert u == [20.0, 40.0, 60.0]
+
+
+def test_unbroadcast_multiple_dimensions():
+    u = unbroadcast(
+        [1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        (2, 3),
+        (1, 1),
+    )
+
+    assert u == [21.0]
+
 
 def test_pad_shape():
     current = (3,)
@@ -72,6 +132,12 @@ def test_pad_shape():
 
     current = (1, 3)
     target = (5, 1)
+
+    padded = _pad_shape_to_rank(current, target)
+    assert padded == (1, 3)
+
+    current = (3,)
+    target = (2, 3)
 
     padded = _pad_shape_to_rank(current, target)
     assert padded == (1, 3)

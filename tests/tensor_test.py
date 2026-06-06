@@ -81,6 +81,44 @@ def test_add_matrix_matrix():
     assert res.data == [7, 3, 9, 3, 7, 8, 16, 8, 8]
 
 
+def test_add_attaches_backprop_metadata():
+    left = Tensor([2, 2], shape=(2, 1))
+    right = Tensor([5, 1], shape=(2, 1))
+
+    output = left + right
+
+    assert output.backprop is not None
+    assert output.backprop.op == "+"
+    assert output.backprop.parents[0] is left
+    assert output.backprop.parents[1] is right
+
+
+def test_add_backprop_updates_parent():
+    left = Tensor([2, 2], shape=(2, 1))
+    right = Tensor([5, 1], shape=(2, 1))
+    output = left + right
+
+    assert output.backprop is not None
+    output.grad = [1.0, 1.0]
+    output.backprop.backward()
+
+    assert left.grad == [1.0, 1.0]
+    assert right.grad == [1.0, 1.0]
+
+
+def test_add_backprop_unbroadcasts_parent():
+    left = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
+    right = Tensor([10, 20, 30], shape=(1, 3))
+    output = left + right
+
+    assert output.backprop is not None
+    output.grad = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    output.backprop.backward()
+
+    assert left.grad == [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    assert right.grad == [2.0, 2.0, 2.0]
+
+
 def test_sub_vector_vector():
     res = Tensor([2, 2], shape=(2, 1)) - Tensor([5, 1], shape=(2, 1))
     assert res.data == [-3, 1]
