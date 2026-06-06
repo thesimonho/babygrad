@@ -263,3 +263,6 @@ class Tensor:
 
     def min(self, axis: Optional[int] = None):
         return self._reduce(ops.reduce_min, axis)
+
+    def backward(self):
+        pass

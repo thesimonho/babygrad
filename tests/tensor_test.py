@@ -119,6 +119,23 @@ def test_add_backprop_unbroadcasts_parent():
     assert right.grad == [2.0, 2.0, 2.0]
 
 
+def test_backward_walks_simple_graph():
+    left = Tensor([1.0], shape=(1,))
+    right = Tensor([2.0], shape=(1,))
+    final_right = Tensor([3.0], shape=(1,))
+
+    partial_output = left + right
+    final_output = partial_output + final_right
+
+    final_output.backward()
+
+    assert final_output.grad == [1.0]
+    assert partial_output.grad == [1.0]
+    assert left.grad == [1.0]
+    assert right.grad == [1.0]
+    assert final_right.grad == [1.0]
+
+
 def test_sub_vector_vector():
     res = Tensor([2, 2], shape=(2, 1)) - Tensor([5, 1], shape=(2, 1))
     assert res.data == [-3, 1]
