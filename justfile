@@ -9,3 +9,6 @@ typecheck:
 
 test:
     uv run pytest
+
+notebooks:
+    uv run jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb

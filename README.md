@@ -14,9 +14,27 @@ Designed to be a lightweight learning project that's easy to mess around with.
 
 - **Every operation must be understood before it's implemented.** No copying reference code. No AI implementation.
 
+## Development
+
+Install the project and development tools:
+
+```bash
+uv sync --dev
+```
+
+Run the test suite:
+
+```bash
+uv run pytest
+```
+
+Run notebooks with the `.venv` kernel. `uv sync --dev` installs `babygrad` as an editable package, so notebooks can import it without modifying `sys.path`.
+
 ## Roadmap
 
 ### Phase 1: Tensor Foundations
+
+[Notebook demo](./notebooks/phase1_tensor_foundations.ipynb)
 
 `*` = useful later, but not required before building forward-only layers.
 
@@ -87,6 +105,8 @@ Designed to be a lightweight learning project that's easy to mess around with.
 </details>
 
 ### Phase 2: Forward Neural Network Primitives
+
+[Notebook demo](./notebooks/phase2_forward_nn_primitives.ipynb)
 
 - [x] **Linear layer** — weights, biases, forward values
 - [x] **Activation functions** — ReLU and softmax forward values

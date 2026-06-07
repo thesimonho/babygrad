@@ -4,12 +4,20 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
+      - "**.ipynb"
       - "**.py"
+      - ".github/workflows/run-tests.yml"
+      - "pyproject.toml"
+      - "uv.lock"
   push:
     branches:
       - main
     paths:
+      - "**.ipynb"
       - "**.py"
+      - ".github/workflows/run-tests.yml"
+      - "pyproject.toml"
+      - "uv.lock"
 permissions:
   contents: read
 jobs:
@@ -32,3 +40,5 @@ jobs:
         run: uv run pyright
       - name: Run tests
         run: uv run pytest
+      - name: Run notebooks
+        run: uv run jupyter nbconvert --to notebook --execute --inplace notebooks/*.ipynb
