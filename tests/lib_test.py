@@ -7,6 +7,7 @@ from babygrad.lib import (
     _coordinate_to_index,
     _index_to_coordinate,
     _get_axis_groups,
+    transpose_flat_data,
 )
 
 
@@ -251,3 +252,17 @@ def test_get_axis_groups_square():
 def test_get_axis_groups_invalid():
     with pytest.raises(IndexError):
         _get_axis_groups((1, 1), 2)
+
+
+def test_transpose_flat_data():
+    data, shape = transpose_flat_data([1, 2, 3, 4, 5, 6], shape=(2, 3))
+
+    assert data == [1, 4, 2, 5, 3, 6]
+    assert shape == (3, 2)
+
+
+def test_transpose_flat_data_identity():
+    data, shape = transpose_flat_data([1, 0, 0, 0, 1, 0, 0, 0, 1], shape=(3, 3))
+
+    assert data == [1, 0, 0, 0, 1, 0, 0, 0, 1]
+    assert shape == (3, 3)

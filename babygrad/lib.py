@@ -254,3 +254,16 @@ def _get_axis_groups(shape: aliases.Shape, axis: int):
         output[key].append(idx)
 
     return list(output.values())
+
+
+def transpose_flat_data(data, shape: aliases.Shape):
+    if len(shape) != 2:
+        raise ValueError("Requires a 2D tensor")
+
+    output = []
+    nrow, ncol = shape
+    for c in range(ncol):
+        for r in range(nrow):
+            output.append(data[r * ncol + c])
+
+    return output, (ncol, nrow)

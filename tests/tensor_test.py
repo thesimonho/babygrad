@@ -174,19 +174,6 @@ def flatten():
     assert f.shape == (len(t.data),)
 
 
-def test_transpose():
-    m = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
-    t = m.transpose()
-    assert t.data == [1, 4, 2, 5, 3, 6]
-    assert t.shape == (3, 2)
-
-
-def test_transpose_identity():
-    i = Tensor([1, 0, 0, 0, 1, 0, 0, 0, 1], shape=(3, 3))
-    t = i.transpose()
-    assert i == t
-
-
 def test_axis_reduction():
     t = Tensor([1, 2, 3, 4, 5, 6], (2, 3))
     assert t.sum().shape == (1, 1)
