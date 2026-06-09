@@ -295,16 +295,24 @@ class Tensor:
         return output
 
     def sum(self, axis: Optional[int] = None):
-        output = self._reduce(ops.reduce_sum, axis, lambda i, grad: grad)
+        output = self._reduce(
+            ops.reduce_sum,
+            axis,
+            lambda i, parent, output, grad, group: [grad] * len(group),
+        )
         return output
 
     def mean(self, axis: Optional[int] = None):
-        output = self._reduce(ops.reduce_mean, axis, lambda i, grad: grad)
+        output = self._reduce(
+            ops.reduce_mean,
+            axis,
+            lambda i, parent, output, grad, group: [grad / len(group)] * len(group),
+        )
         return output
 
     def max(self, axis: Optional[int] = None):
-        def rule(idx_group, parent, output, grad, group):
-            value = output.data[idx_group]
+        def rule(i, parent, output, grad, group):
+            value = output.data[i]
             winners = [True if parent.data[g] == value else False for g in group]
             n_winners = sum(winners)
 
@@ -315,8 +323,8 @@ class Tensor:
         return output
 
     def min(self, axis: Optional[int] = None):
-        def rule(idx_group, parent, output, grad, group):
-            value = output.data[idx_group]
+        def rule(i, parent, output, grad, group):
+            value = output.data[i]
             winners = [True if parent.data[g] == value else False for g in group]
             n_winners = sum(winners)
 

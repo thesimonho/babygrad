@@ -123,9 +123,9 @@ Run notebooks with the `.venv` kernel. `uv sync --dev` installs `babygrad` as an
 - [x] neg
 - [x] mul
 - [x] pow
-- [ ] max
-- [ ] sum
-- [ ] mean
+- [x] max
+- [x] sum
+- [x] mean
 
 - [ ] matmul
 - [x] transpose
