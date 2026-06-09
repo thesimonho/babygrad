@@ -10,7 +10,7 @@ Designed to be a lightweight learning project that's easy to mess around with.
 
 ## Rules
 
-- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here (a few minor exceptions for things like matplotlib)
+- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here (a few minor exceptions for visualization, like matplotlib and graphviz)
 
 - **Every operation must be understood before it's implemented.** No copying reference code. No AI implementation.
 
@@ -29,6 +29,19 @@ uv run pytest
 ```
 
 Run notebooks with the `.venv` kernel. `uv sync --dev` installs `babygrad` as an editable package, so notebooks can import it without modifying `sys.path`.
+
+### Visualization (optional)
+
+Histograms and computation-graph diagrams use `matplotlib` and `graphviz`. The `graphviz` Python package is installed by `uv sync`, but graph rendering also needs the system `dot` binary:
+
+```bash
+# Debian/Ubuntu/WSL
+sudo apt install graphviz
+# macOS
+brew install graphviz
+```
+
+Everything else runs without it.
 
 ## Roadmap
 

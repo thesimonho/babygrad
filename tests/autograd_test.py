@@ -6,12 +6,6 @@ from pytest import approx
 from babygrad.nn import ReLU, Softmax
 from babygrad.tensor import Tensor
 
-# backward_walk propagates a shared *intermediate* node to its parents on the
-# first consumer it reaches, then the visited-guard blocks later consumers from
-# reaching the leaves. Fixed by propagating in topological order (all children
-# before a parent). Remove these markers once backward_walk is corrected.
-BACKWARD_WALK_ORDERING_BUG = "backward_walk propagates shared nodes before they finish accumulating"
-
 
 def propagate_output_grad(output: Tensor, grad: list[float]) -> None:
     output.grad = grad
@@ -85,8 +79,7 @@ def test_backward_accumulates_gradients():
     assert right.grad == [2.0]
 
 
-@pytest.mark.xfail(reason=BACKWARD_WALK_ORDERING_BUG, strict=True)
-def test_backward_fully_accumulates_shared_intermediate_node():
+def test_backward_fully_accumulates_shared():
     """A shared *intermediate* node must finish accumulating from all of its
     consumers before it propagates onward to its own parents.
 
@@ -344,7 +337,6 @@ def test_min_tie_splits_gradient():
     assert tensor.grad == approx([0.5, 0.5, 0.0])
 
 
-@pytest.mark.xfail(reason=BACKWARD_WALK_ORDERING_BUG, strict=True)
 def test_softmax_row_gradients():
     logits = Tensor([0.0, 1.0, 2.0, 1.0, 1.0, 1.0], shape=(2, 3))
     weights = Tensor([1.0, 0.0, -1.0, 2.0, -1.0, 0.5], shape=(2, 3))
