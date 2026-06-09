@@ -71,19 +71,11 @@ def propagate_spread(
     Propagates gradients by spreading across multiple inputs.
     Requires additional context about group breakdown.
     Mutates parent.
-
-    3 items
-    [1.0  4.0  2.0]
-    1 items
-    [4.0]
-    [[0, 1, 2]]
     """
-    print(parent)
-
-    for grad, group in zip(output.grad, groups):
-        print(group, grad)
-        for i in range(len(parent.data)):
-            parent.grad[i] += gradient_rule(grad)
+    for idx_group, (grad, group) in enumerate(zip(output.grad, groups)):
+        group_gradients = gradient_rule(idx_group, parent, output, grad, group)
+        for p, g in zip(group, group_gradients):
+            parent.grad[p] += g
 
 
 def backward_walk(tensor: Tensor, visited: set[int]) -> None:

@@ -303,11 +303,27 @@ class Tensor:
         return output
 
     def max(self, axis: Optional[int] = None):
-        output = self._reduce(ops.reduce_max, axis, lambda i, grad: grad)
+        def rule(idx_group, parent, output, grad, group):
+            value = output.data[idx_group]
+            winners = [True if parent.data[g] == value else False for g in group]
+            n_winners = sum(winners)
+
+            # equally divide the gradient between tied winners
+            return [grad * 1 / n_winners if w is True else 0 for w in winners]
+
+        output = self._reduce(ops.reduce_max, axis, rule)
         return output
 
     def min(self, axis: Optional[int] = None):
-        output = self._reduce(ops.reduce_min, axis, lambda i, grad: grad)
+        def rule(idx_group, parent, output, grad, group):
+            value = output.data[idx_group]
+            winners = [True if parent.data[g] == value else False for g in group]
+            n_winners = sum(winners)
+
+            # equally divide the gradient between tied winners
+            return [grad * 1 / n_winners if w is True else 0 for w in winners]
+
+        output = self._reduce(ops.reduce_min, axis, rule)
         return output
 
     def backward(self):

@@ -263,6 +263,42 @@ def test_max_axis_gradient():
     assert tensor.grad == [0.0, 1.0, 0.0, 1.0, 0.0, 0.0]
 
 
+def test_max_tie_splits_gradient():
+    tensor = Tensor([4.0, 4.0, 2.0], shape=(3,))
+
+    output = tensor.max()
+    output.backward()
+
+    assert tensor.grad == approx([0.5, 0.5, 0.0])
+
+
+def test_max_routes_non_unit_upstream_gradient():
+    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,))
+
+    scaled = tensor.max() * Tensor([3.0], shape=(1,))
+    scaled.backward()
+
+    assert tensor.grad == approx([0.0, 3.0, 0.0])
+
+
+def test_min_gradient():
+    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,))
+
+    output = tensor.min()
+    output.backward()
+
+    assert tensor.grad == [1.0, 0.0, 0.0]
+
+
+def test_min_tie_splits_gradient():
+    tensor = Tensor([1.0, 1.0, 2.0], shape=(3,))
+
+    output = tensor.min()
+    output.backward()
+
+    assert tensor.grad == approx([0.5, 0.5, 0.0])
+
+
 def test_softmax_row_gradients():
     logits = Tensor([0.0, 1.0, 2.0, 1.0, 1.0, 1.0], shape=(2, 3))
     weights = Tensor([1.0, 0.0, -1.0, 2.0, -1.0, 0.5], shape=(2, 3))
