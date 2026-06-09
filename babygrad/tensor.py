@@ -263,7 +263,12 @@ class Tensor:
     def t(self):
         return self.transpose()
 
-    def _reduce(self, op: Callable, axis: Optional[int]):
+    def _reduce(
+        self,
+        op: Callable[[list[aliases.Number]], aliases.Number],
+        axis: Optional[int],
+        gradient_rule: Callable,
+    ) -> Tensor:
         if axis is not None:
             # normalize negative axis
             if axis < 0:
@@ -272,27 +277,38 @@ class Tensor:
             groups = lib._get_axis_groups(self.shape, axis=axis)
 
             # set the target axis to size 1
+            reduced = [op([self.data[i] for i in group]) for group in groups]
             shape = tuple(1 if i == axis else x for i, x in enumerate(self.shape))
-            return Tensor(
-                [op([self.data[i] for i in group]) for group in groups],
-                shape=tuple(shape),
-            )
         else:
+            groups = [[x for x in range(len(self.data))]]
+            reduced = [op(self.data)]
             shape = tuple(1 for _ in range(len(self.shape)))
 
-        return Tensor([op(self.data)], shape=shape)
+        output = Tensor(reduced, shape)
+        output.backprop = autograd.BackpropMetadata(
+            op=op.__name__.removeprefix("reduce_"),
+            parents=[self],
+            propagate_to_parents=lambda: autograd.propagate_spread(
+                self, output, groups, gradient_rule
+            ),
+        )
+        return output
 
     def sum(self, axis: Optional[int] = None):
-        return self._reduce(ops.reduce_sum, axis)
+        output = self._reduce(ops.reduce_sum, axis, lambda i, grad: grad)
+        return output
 
     def mean(self, axis: Optional[int] = None):
-        return self._reduce(ops.reduce_mean, axis)
+        output = self._reduce(ops.reduce_mean, axis, lambda i, grad: grad)
+        return output
 
     def max(self, axis: Optional[int] = None):
-        return self._reduce(ops.reduce_max, axis)
+        output = self._reduce(ops.reduce_max, axis, lambda i, grad: grad)
+        return output
 
     def min(self, axis: Optional[int] = None):
-        return self._reduce(ops.reduce_min, axis)
+        output = self._reduce(ops.reduce_min, axis, lambda i, grad: grad)
+        return output
 
     def backward(self):
         """

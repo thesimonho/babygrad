@@ -1,16 +1,9 @@
 import math
 
-import pytest
 from pytest import approx
 
 from babygrad.nn import ReLU, Softmax
 from babygrad.tensor import Tensor
-
-
-pending_phase_3_gradient_rule = pytest.mark.xfail(
-    reason="Phase 3 operation gradient rule is not implemented yet",
-    strict=True,
-)
 
 
 def propagate_output_grad(output: Tensor, grad: list[float]) -> None:
@@ -85,7 +78,6 @@ def test_backward_accumulates_gradients():
     assert right.grad == [2.0]
 
 
-@pending_phase_3_gradient_rule
 def test_sub_gradient_signs():
     left = Tensor([2.0, 3.0], shape=(2,))
     right = Tensor([5.0, 7.0], shape=(2,))
@@ -97,7 +89,6 @@ def test_sub_gradient_signs():
     assert right.grad == [-1.0, -1.0]
 
 
-@pending_phase_3_gradient_rule
 def test_sub_unbroadcasts_gradients():
     left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
     right = Tensor([10.0, 20.0, 30.0], shape=(1, 3))
@@ -109,7 +100,6 @@ def test_sub_unbroadcasts_gradients():
     assert right.grad == [-2.0, -2.0, -2.0]
 
 
-@pending_phase_3_gradient_rule
 def test_neg_gradient():
     tensor = Tensor([2.0, -3.0], shape=(2,))
 
@@ -119,7 +109,6 @@ def test_neg_gradient():
     assert tensor.grad == [-1.0, -1.0]
 
 
-@pending_phase_3_gradient_rule
 def test_mul_gradients():
     left = Tensor([2.0, 3.0], shape=(2,))
     right = Tensor([5.0, 7.0], shape=(2,))
@@ -131,7 +120,6 @@ def test_mul_gradients():
     assert right.grad == [2.0, 3.0]
 
 
-@pending_phase_3_gradient_rule
 def test_mul_unbroadcasts_gradients():
     left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
     right = Tensor([10.0, 20.0, 30.0], shape=(1, 3))
@@ -143,7 +131,6 @@ def test_mul_unbroadcasts_gradients():
     assert right.grad == [5.0, 7.0, 9.0]
 
 
-@pending_phase_3_gradient_rule
 def test_pow_gradient():
     tensor = Tensor([2.0, -3.0], shape=(2,))
 
@@ -153,7 +140,6 @@ def test_pow_gradient():
     assert tensor.grad == [12.0, 27.0]
 
 
-@pending_phase_3_gradient_rule
 def test_sum_gradient():
     tensor = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2))
 
@@ -163,7 +149,6 @@ def test_sum_gradient():
     assert tensor.grad == [1.0, 1.0, 1.0, 1.0]
 
 
-@pending_phase_3_gradient_rule
 def test_sum_axis_gradient():
     tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
 
@@ -173,7 +158,6 @@ def test_sum_axis_gradient():
     assert tensor.grad == [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
 
-@pending_phase_3_gradient_rule
 def test_mean_gradient():
     tensor = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2))
 
@@ -183,7 +167,6 @@ def test_mean_gradient():
     assert tensor.grad == [0.25, 0.25, 0.25, 0.25]
 
 
-@pending_phase_3_gradient_rule
 def test_mean_axis_gradient():
     tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
 
@@ -193,7 +176,6 @@ def test_mean_axis_gradient():
     assert tensor.grad == approx([1 / 3, 1 / 3, 1 / 3, 1 / 3, 1 / 3, 1 / 3])
 
 
-@pending_phase_3_gradient_rule
 def test_matmul_gradients():
     left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
     right = Tensor([7.0, 8.0, 9.0, 10.0, 11.0, 12.0], shape=(3, 2))
@@ -205,7 +187,6 @@ def test_matmul_gradients():
     assert right.grad == [5.0, 5.0, 7.0, 7.0, 9.0, 9.0]
 
 
-@pending_phase_3_gradient_rule
 def test_transpose_gradient():
     tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
 
@@ -215,7 +196,6 @@ def test_transpose_gradient():
     assert tensor.grad == [10.0, 30.0, 50.0, 20.0, 40.0, 60.0]
 
 
-@pending_phase_3_gradient_rule
 def test_exp_gradient():
     tensor = Tensor([0.0, 1.0], shape=(2,))
 
@@ -225,7 +205,6 @@ def test_exp_gradient():
     assert tensor.grad == approx([1.0, math.e])
 
 
-@pending_phase_3_gradient_rule
 def test_log_gradient():
     tensor = Tensor([2.0, 4.0], shape=(2,))
 
@@ -235,7 +214,6 @@ def test_log_gradient():
     assert tensor.grad == [0.5, 0.25]
 
 
-@pending_phase_3_gradient_rule
 def test_div_gradients():
     left = Tensor([6.0, 8.0], shape=(2,))
     right = Tensor([2.0, 4.0], shape=(2,))
@@ -247,7 +225,6 @@ def test_div_gradients():
     assert right.grad == [-1.5, -0.5]
 
 
-@pending_phase_3_gradient_rule
 def test_div_unbroadcasts_gradients():
     left = Tensor([6.0, 8.0, 10.0, 12.0], shape=(2, 2))
     right = Tensor([2.0, 4.0], shape=(1, 2))
@@ -259,7 +236,6 @@ def test_div_unbroadcasts_gradients():
     assert right.grad == [-4.0, -1.25]
 
 
-@pending_phase_3_gradient_rule
 def test_relu_gradient():
     tensor = Tensor([-2.0, 0.0, 3.0], shape=(3,))
 
@@ -269,7 +245,6 @@ def test_relu_gradient():
     assert tensor.grad == [0.0, 0.0, 1.0]
 
 
-@pending_phase_3_gradient_rule
 def test_max_gradient():
     tensor = Tensor([1.0, 4.0, 2.0], shape=(3,))
 
@@ -279,7 +254,6 @@ def test_max_gradient():
     assert tensor.grad == [0.0, 1.0, 0.0]
 
 
-@pending_phase_3_gradient_rule
 def test_max_axis_gradient():
     tensor = Tensor([1.0, 5.0, 2.0, 9.0, 3.0, 4.0], shape=(2, 3))
 
@@ -289,7 +263,6 @@ def test_max_axis_gradient():
     assert tensor.grad == [0.0, 1.0, 0.0, 1.0, 0.0, 0.0]
 
 
-@pending_phase_3_gradient_rule
 def test_softmax_row_gradients():
     logits = Tensor([0.0, 1.0, 2.0, 1.0, 1.0, 1.0], shape=(2, 3))
     weights = Tensor([1.0, 0.0, -1.0, 2.0, -1.0, 0.5], shape=(2, 3))

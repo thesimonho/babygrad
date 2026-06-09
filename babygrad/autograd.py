@@ -37,7 +37,11 @@ def attach_backprop_metadata(
     return output
 
 
-def propagate_same_shape(parents, output, gradient_rules) -> None:
+def propagate_same_shape(
+    parents: list[Tensor],
+    output: Tensor,
+    gradient_rules: list[Callable[[int, aliases.Number], aliases.Number]],
+) -> None:
     """
     Propagates gradients to parent that has the same shape as the output.
     Mutates parents.
@@ -55,6 +59,32 @@ def propagate_same_shape(parents, output, gradient_rules) -> None:
         assert len(parent_shaped_grad) == len(parent.grad)
         for j in range(len(parent.grad)):
             parent.grad[j] += parent_shaped_grad[j]
+
+
+def propagate_spread(
+    parent: Tensor,
+    output: Tensor,
+    groups: list[list[int]],
+    gradient_rule: Callable,
+) -> None:
+    """
+    Propagates gradients by spreading across multiple inputs.
+    Requires additional context about group breakdown.
+    Mutates parent.
+
+    3 items
+    [1.0  4.0  2.0]
+    1 items
+    [4.0]
+    [[0, 1, 2]]
+    """
+    print(parent)
+
+    for grad, group in zip(output.grad, groups):
+        print(group, grad)
+        for i in range(len(parent.data)):
+            parent.grad[i] += gradient_rule(grad)
+
 
 def backward_walk(tensor: Tensor, visited: set[int]) -> None:
     """
