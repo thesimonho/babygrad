@@ -230,7 +230,7 @@ def _get_axis_groups_old(shape: aliases.Shape, axis: int):
     return list(groups.values())
 
 
-def _get_axis_groups(shape: aliases.Shape, axis: int):
+def _get_axis_groups(shape: aliases.Shape, axis: int) -> list[list[int]]:
     """
     Return a list of lists of flat indexes that would be reduced together.
 

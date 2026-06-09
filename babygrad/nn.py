@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from random import Random
 from babygrad.aliases import Shape, Number
 from babygrad.tensor import Tensor
+from . import autograd
 from dataclasses import dataclass
 
 
@@ -51,34 +52,45 @@ class Linear(Layer):
         bias = _init_weights((1, output_size))
         self.bias = Tensor(bias, shape=(1, output_size))
 
-    def forward(self, input: Tensor):
+    def forward(self, input: Tensor) -> Tensor:
         return input @ self.weights + self.bias
 
 
 class ReLU(Layer):
-    def forward(self, input: Tensor):
-        data = [max(0, x) for x in input.data]
-        return Tensor(data, shape=input.shape)
+    def forward(self, input: Tensor) -> Tensor:
+        output = Tensor([max(0, x) for x in input.data], shape=input.shape)
+
+        # attach backprop data so the layer can participate in autograd
+        return autograd.attach_backprop_metadata(
+            label="ReLU",
+            parents=[input],
+            output=output,
+            gradient_rules=[lambda i, grad: grad if input.data[i] > 0 else 0],
+        )
 
 
 class Softmax(Layer):
-    def forward(self, input: Tensor):
+    def forward(self, input: Tensor) -> Tensor:
         """
-        softmax row = exp(row - row_max) / sum(exp(row - row_max))
+        Softmax row = exp(row - row_max) / sum(exp(row - row_max))
+
+        Composition using tensor methods means the output here already
+        contains autograd backprop data.
         """
         z = input - input.max(axis=1)
-        row = z.exp() / z.exp().sum(axis=1)
+        exps = z.exp()
+        row = exps / exps.sum(axis=1)
         return row
 
 
-def CCE(y_true: Tensor, y_pred: Tensor):
+def CCE(y_true: Tensor, y_pred: Tensor) -> Tensor:
     """
     Categorical cross-entropy for one hot targets
     """
     return -(y_true * y_pred.log()).sum(axis=1).mean()
 
 
-def MSE(y_true: Tensor, y_pred: Tensor):
+def MSE(y_true: Tensor, y_pred: Tensor) -> Tensor:
     """
     Mean squared error for scalar targets
     """

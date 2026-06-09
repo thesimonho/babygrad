@@ -20,30 +20,41 @@ def attach_backprop_metadata(
     output: Tensor,
     gradient_rules: list[Callable[[int, aliases.Number], aliases.Number]],
 ) -> Tensor:
+    """
+    Attach backprop and gradient rules to a tensor with same shape parents
+    """
     assert len(parents) == len(gradient_rules), (
         "each parent must have a gradient update rule"
     )
 
-    def propagate():
-        for parent, rule in zip(parents, gradient_rules):
-            output_shaped_grad = []
-            for i in range(len(output.grad)):
-                output_shaped_grad.append(rule(i, output.grad[i]))
-            assert len(output_shaped_grad) == len(output.grad)
-
-            # parent may have been broadcasted, so we need to undo that so indexing aligns
-            parent_shaped_grad = lib.unbroadcast(
-                output_shaped_grad, output.shape, parent.shape
-            )
-            assert len(parent_shaped_grad) == len(parent.grad)
-            for j in range(len(parent.grad)):
-                parent.grad[j] += parent_shaped_grad[j]
-
     output.backprop = BackpropMetadata(
-        op=label, parents=parents, propagate_to_parents=propagate
+        op=label,
+        parents=parents,
+        propagate_to_parents=lambda: propagate_same_shape(
+            parents, output, gradient_rules
+        ),
     )
     return output
 
+
+def propagate_same_shape(parents, output, gradient_rules) -> None:
+    """
+    Propagates gradients to parent that has the same shape as the output.
+    Mutates parents.
+    """
+    for parent, rule in zip(parents, gradient_rules):
+        output_shaped_grad = []
+        for i in range(len(output.grad)):
+            output_shaped_grad.append(rule(i, output.grad[i]))
+        assert len(output_shaped_grad) == len(output.grad)
+
+        # parent may have been broadcasted, so we need to undo that so indexing aligns
+        parent_shaped_grad = lib.unbroadcast(
+            output_shaped_grad, output.shape, parent.shape
+        )
+        assert len(parent_shaped_grad) == len(parent.grad)
+        for j in range(len(parent.grad)):
+            parent.grad[j] += parent_shaped_grad[j]
 
 def backward_walk(tensor: Tensor, visited: set[int]) -> None:
     """

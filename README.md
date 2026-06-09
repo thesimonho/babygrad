@@ -119,20 +119,23 @@ Run notebooks with the `.venv` kernel. `uv sync --dev` installs `babygrad` as an
 <summary><strong>Computational graph</strong> — tracking operations as a DAG of nodes</summary>
 
 - [x] add
-- [ ] sub
-- [ ] neg
-- [ ] mul
-- [ ] pow
+- [x] sub
+- [x] neg
+- [x] mul
+- [x] pow
+- [ ] max
 - [ ] sum
 - [ ] mean
+
 - [ ] matmul
-- [ ] transpose
-- [ ] exp
-- [ ] log
-- [ ] div
-- [ ] relu
-- [ ] max
-- [ ] softmax
+- [x] transpose
+
+- [x] exp
+- [x] log
+- [x] div
+
+- [x] relu
+- [x] softmax (by composition)
 
 </details>
 - [x] **Backward pass** — reverse-mode autodiff graph walk

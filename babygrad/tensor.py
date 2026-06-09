@@ -123,24 +123,64 @@ class Tensor:
 
     def __sub__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
-        return Tensor(ops.sub(left, right), shape=shape)
+        output = Tensor(ops.sub(left, right), shape=shape)
+        return autograd.attach_backprop_metadata(
+            label="-",
+            parents=[self, t],
+            output=output,
+            gradient_rules=[lambda _, grad: grad * 1, lambda _, grad: grad * -1],
+        )
 
     def __abs__(self) -> Tensor:
         return Tensor(ops.absolute(self.data), shape=self.shape)
 
     def __neg__(self) -> Tensor:
-        return Tensor(ops.neg(self.data), shape=self.shape)
+        output = Tensor(ops.neg(self.data), shape=self.shape)
+        return autograd.attach_backprop_metadata(
+            label="-",
+            parents=[self],
+            output=output,
+            gradient_rules=[lambda _, grad: grad * -1],
+        )
 
     def __pow__(self, exponent: aliases.Number) -> Tensor:
-        return Tensor(ops.power(self.data, exponent), shape=self.shape)
+        output = Tensor(ops.power(self.data, exponent), shape=self.shape)
+        return autograd.attach_backprop_metadata(
+            label="**",
+            parents=[self],
+            output=output,
+            gradient_rules=[
+                lambda i, grad: grad * exponent * self.data[i] ** (exponent - 1)
+            ],
+        )
 
     def __truediv__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
-        return Tensor(ops.div(left, right), shape=shape)
+        output = Tensor(ops.div(left, right), shape=shape)
+        # c = a/b = a*1/b = a * 1/(4). dc/da: 1/4 = 1/b
+        # c = ab^-1 = (4)/b = 4b^-1. dc/db: -4b^-2 = -4/b^2 = -a/b^2
+        return autograd.attach_backprop_metadata(
+            label="/",
+            parents=[self, t],
+            output=output,
+            gradient_rules=[
+                lambda i, grad: grad * 1 / right[i],
+                lambda i, grad: grad * -left[i] / right[i] ** 2,
+            ],
+        )
 
     def __mul__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
-        return Tensor(ops.mul(left, right), shape=shape)
+        output = Tensor(ops.mul(left, right), shape=shape)
+        return autograd.attach_backprop_metadata(
+            label="*",
+            parents=[self, t],
+            output=output,
+            gradient_rules=[
+                lambda i, grad: grad * right[i],
+                lambda i, grad: grad * left[i],
+            ],
+        )
 
     def __matmul__(self, t: Tensor) -> Tensor:
         # inners must match
@@ -157,13 +197,34 @@ class Tensor:
         )
 
     def log(self):
-        return Tensor(ops.log(self.data), shape=self.shape)
+        output = Tensor(ops.log(self.data), shape=self.shape)
+        return autograd.attach_backprop_metadata(
+            label="log",
+            parents=[self],
+            output=output,
+            gradient_rules=[lambda i, grad: grad * (1 / self.data[i])],
+        )
 
     def exp(self):
-        return Tensor(ops.exp(self.data), shape=self.shape)
+        """For exp, the derivative is itself (the output)"""
+        output = Tensor(ops.exp(self.data), shape=self.shape)
+        return autograd.attach_backprop_metadata(
+            label="exp",
+            parents=[self],
+            output=output,
+            gradient_rules=[lambda i, grad: grad * output.data[i]],
+        )
 
     def sqrt(self):
-        return Tensor(ops.sqrt(self.data), shape=self.shape)
+        output = Tensor(ops.sqrt(self.data), shape=self.shape)
+        return autograd.attach_backprop_metadata(
+            label="sqrt",
+            parents=[self],
+            output=output,
+            gradient_rules=[
+                lambda i, grad: grad * 0.5 * self.data[i] ** -0.5,
+            ],
+        )
 
     def copy(self):
         return Tensor(list(self.data), shape=self.shape)
@@ -179,14 +240,25 @@ class Tensor:
         return self.reshape((len(self.data),))
 
     def transpose(self):
-        if self.ndim != 2:
-            raise ValueError("Requires a 2D tensor")
+        data, shape = lib.transpose_flat_data(self.data, self.shape)
+        output = Tensor(data, shape)
 
-        output = []
-        for c in range(self.ncol):
-            for r in range(self.nrow):
-                output.append(self.data[r * self.ncol + c])
-        return Tensor(output, (self.ncol, self.nrow))
+        def propagate():
+            parent_grad, parent_shape = lib.transpose_flat_data(
+                output.grad, output.shape
+            )
+            assert parent_shape == self.shape
+
+            for i in range(len(self.grad)):
+                self.grad[i] += parent_grad[i]
+
+        output.backprop = autograd.BackpropMetadata(
+            op="transpose",
+            parents=[self],
+            propagate_to_parents=propagate,
+        )
+
+        return output
 
     def t(self):
         return self.transpose()
