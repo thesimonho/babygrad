@@ -128,6 +128,8 @@ Everything else runs without it.
 
 ### Phase 3: Autograd
 
+[Notebook demo](./notebooks/phase3_autograd.ipynb)
+
 <details>
 <summary><strong>Computational graph</strong> — tracking operations as a DAG of nodes</summary>
 
