@@ -310,7 +310,7 @@ def test_max_tie_splits_gradient():
     assert tensor.grad == approx([0.5, 0.5, 0.0])
 
 
-def test_max_routes_non_unit_upstream_gradient():
+def test_max_non_unit_upstream_gradient():
     tensor = Tensor([1.0, 4.0, 2.0], shape=(3,))
 
     scaled = tensor.max() * Tensor([3.0], shape=(1,))

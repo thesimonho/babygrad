@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import math
 from typing import Callable, Optional, Union
 
@@ -341,8 +342,9 @@ class Tensor:
         # seed gradient for the root/loss tensor at the start of backprop
         self.grad = [1.0 for _ in self.grad]
 
-        # track which tensors have been visited so we dont call propagate multiple times
-        # for tensors that are reused.
+        # seed reference counter for number of children/consumers for a node
+        child_counts = defaultdict(int)
         visited = set()
+        autograd.count_children(self, visited, child_counts)
 
-        autograd.backward_walk(self, visited)
+        autograd.backward_walk(self, child_counts)

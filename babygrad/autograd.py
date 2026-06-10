@@ -78,18 +78,35 @@ def propagate_spread(
             parent.grad[p] += g
 
 
-def backward_walk(tensor: Tensor, visited: set[int]) -> None:
+def backward_walk(tensor: Tensor, child_counts: dict[int, int]) -> None:
     """
-    Pass the current gradient back to parents to accumulate the gradients. Visit each parent and walk recursively.
+    Pass the current gradient back to parents to accumulate.
+    Only propagate after gradients from all children have been received (count == 0)
     """
     if tensor.backprop is None:
         return
 
+    # only send back gradient information once all
+    # children grads have been received
+    if child_counts[id(tensor)] == 0:
+        tensor.backprop.propagate_to_parents()
+        for p in tensor.backprop.parents:
+            child_counts[id(p)] -= 1
+            backward_walk(p, child_counts)
+
+
+def count_children(tensor: Tensor, visited: set[int], counts: dict[int, int]) -> None:
+    """
+    Count the number of children/consumers a tensor has.
+    During backprop we need to know whether a tensor has accumulated gradients from all its children
+    before passing the accumulation back.
+    """
     if id(tensor) in visited:
         return
 
-    tensor.backprop.propagate_to_parents()
     visited.add(id(tensor))
 
-    for p in tensor.backprop.parents:
-        backward_walk(p, visited)
+    if tensor.backprop:
+        for p in tensor.backprop.parents:
+            counts[id(p)] += 1
+            count_children(p, visited, counts)

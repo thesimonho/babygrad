@@ -151,6 +151,7 @@ Everything else runs without it.
 - [x] softmax (by composition)
 
 </details>
+
 - [x] **Backward pass** — reverse-mode autodiff graph walk
 - [x] **Gradient accumulation** — multi-use tensors propagate once after accumulating
 
@@ -158,6 +159,7 @@ Everything else runs without it.
 
 - [ ] **SGD optimizer** — parameter updates, learning rate
 - [ ] **Training loop** — forward, loss, backward, step
+- [ ] **Zero grads between steps** — TODO: `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
 
 ### Phase 5: Going Deeper
 
