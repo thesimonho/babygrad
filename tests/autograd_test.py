@@ -1,6 +1,5 @@
 import math
 
-import pytest
 from pytest import approx
 
 from babygrad.nn import ReLU, Softmax
@@ -213,7 +212,6 @@ def test_mean_axis_gradient():
     assert tensor.grad == approx([1 / 3, 1 / 3, 1 / 3, 1 / 3, 1 / 3, 1 / 3])
 
 
-@pytest.mark.xfail(reason="matmul backward not implemented yet", strict=True)
 def test_matmul_gradients():
     left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
     right = Tensor([7.0, 8.0, 9.0, 10.0, 11.0, 12.0], shape=(3, 2))
@@ -223,6 +221,111 @@ def test_matmul_gradients():
 
     assert left.grad == [15.0, 19.0, 23.0, 15.0, 19.0, 23.0]
     assert right.grad == [5.0, 5.0, 7.0, 7.0, 9.0, 9.0]
+
+
+def test_matmul_tracks_parents():
+    left = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2))
+    right = Tensor([5.0, 6.0, 7.0, 8.0], shape=(2, 2))
+
+    output = left @ right
+
+    assert output.backprop is not None
+    assert output.backprop.parents[0] is left
+    assert output.backprop.parents[1] is right
+
+
+def _weighted_matmul_loss(
+    left_data: list[float],
+    right_data: list[float],
+    left_shape: tuple[int, ...],
+    right_shape: tuple[int, ...],
+    weights: list[float],
+) -> float:
+    """Forward-only scalar loss: sum((left @ right) * weights).
+
+    The element-wise weights give every output cell a distinct upstream
+    gradient, so transposed/reordered gradient rules can't pass by accident.
+    """
+    left = Tensor(list(left_data), shape=left_shape)
+    right = Tensor(list(right_data), shape=right_shape)
+    weight_tensor = Tensor(list(weights), shape=(left_shape[0], right_shape[1]))
+    loss = ((left @ right) * weight_tensor).sum()
+    return loss.data[0]
+
+
+def _finite_difference_grads(
+    data: list[float], loss_of_data, epsilon: float = 1e-6
+) -> list[float]:
+    """Central-difference gradient of a scalar loss w.r.t. each entry of data."""
+    grads = []
+    for i in range(len(data)):
+        bumped_up = list(data)
+        bumped_up[i] += epsilon
+        bumped_down = list(data)
+        bumped_down[i] -= epsilon
+        grads.append(
+            (loss_of_data(bumped_up) - loss_of_data(bumped_down)) / (2 * epsilon)
+        )
+    return grads
+
+
+def test_matmul_gradients_match_differences():
+    """Oracle test: backprop through matmul must agree with numerically
+    wiggling each input entry and measuring the loss response.
+
+    Shapes are rectangular and non-symmetric (2x3 @ 3x4) on purpose: with
+    square matrices a transposed or operand-swapped gradient rule can still
+    be shape-legal and slip through; here it cannot.
+    """
+    left_shape, right_shape = (2, 3), (3, 4)
+    left_data = [1.5, -2.0, 3.0, 0.5, 4.0, -1.0]
+    right_data = [2.0, -1.0, 0.5, 3.0, 1.0, 2.5, -2.0, 0.0, -0.5, 1.5, 4.0, -3.0]
+    weights = [1.0, -2.0, 3.0, 0.5, -1.5, 2.0, -0.5, 4.0]
+
+    left = Tensor(list(left_data), shape=left_shape)
+    right = Tensor(list(right_data), shape=right_shape)
+    weight_tensor = Tensor(list(weights), shape=(2, 4))
+
+    loss = ((left @ right) * weight_tensor).sum()
+    loss.backward()
+
+    expected_left_grads = _finite_difference_grads(
+        left_data,
+        lambda data: _weighted_matmul_loss(
+            data, right_data, left_shape, right_shape, weights
+        ),
+    )
+    expected_right_grads = _finite_difference_grads(
+        right_data,
+        lambda data: _weighted_matmul_loss(
+            left_data, data, left_shape, right_shape, weights
+        ),
+    )
+
+    assert left.grad == approx(expected_left_grads, rel=1e-4, abs=1e-4)
+    assert right.grad == approx(expected_right_grads, rel=1e-4, abs=1e-4)
+
+
+def test_matmul_accumulates_when_reused():
+    """The same tensor fed to matmul twice must collect gradients from both
+    consumers — matmul's backward has to play nice with the engine's
+    fan-out accumulation, not overwrite."""
+    shared = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
+    right = Tensor([2.0, -1.0, 0.5, 3.0, 1.0, 2.5], shape=(3, 2))
+    weights = Tensor([1.0, -2.0, 3.0, 0.5], shape=(2, 2))
+
+    first = (shared @ right) * weights
+    second = (shared @ right) * weights
+    loss = (first + second).sum()
+    loss.backward()
+
+    single_left = Tensor(list(shared.data), shape=shared.shape)
+    single_right = Tensor(list(right.data), shape=right.shape)
+    single_loss = ((single_left @ single_right) * weights).sum()
+    single_loss.backward()
+
+    doubled = [2 * g for g in single_left.grad]
+    assert shared.grad == approx(doubled)
 
 
 def test_transpose_gradient():

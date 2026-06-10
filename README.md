@@ -128,7 +128,7 @@ Everything else runs without it.
 
 ### Phase 3: Autograd
 
-<details open>
+<details>
 <summary><strong>Computational graph</strong> — tracking operations as a DAG of nodes</summary>
 
 - [x] add
@@ -140,7 +140,7 @@ Everything else runs without it.
 - [x] sum
 - [x] mean
 
-- [ ] matmul
+- [x] matmul
 - [x] transpose
 
 - [x] exp

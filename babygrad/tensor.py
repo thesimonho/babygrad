@@ -191,10 +191,27 @@ class Tensor:
         # output shape = outers
         shape = (self.nrow, t.ncol)
         data = ops.matmul(self.data, t.data, self.shape, t.shape)
+        output = Tensor(data, shape=shape)
 
-        return Tensor(
-            data,
-            shape=shape,
+        def propagate():
+            # A = g@B.t
+            # B = A.t@g
+            At, At_shape = lib.transpose_flat_data(self.data, self.shape)
+            Bt, Bt_shape = lib.transpose_flat_data(t.data, t.shape)
+            A_grad = ops.matmul(output.grad, Bt, output.shape, Bt_shape)
+            B_grad = ops.matmul(At, output.grad, At_shape, output.shape)
+
+            for i in range(len(self.grad)):
+                self.grad[i] += A_grad[i]
+
+            for i in range(len(t.grad)):
+                t.grad[i] += B_grad[i]
+
+        return autograd.attach_backprop_metadata(
+            label="@",
+            parents=[self, t],
+            output=output,
+            propagate_to_parents=propagate,
         )
 
     def log(self):
