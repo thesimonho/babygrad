@@ -18,6 +18,26 @@ def attach_backprop_metadata(
     label: str,
     parents: list[Tensor],
     output: Tensor,
+    propagate_to_parents: Callable[[], None],
+) -> Tensor:
+    """
+    Attach backprop metadata to an output tensor using a prebuilt propagate closure.
+
+    The single funnel through which every op joins the computational graph;
+    BackpropMetadata is constructed nowhere else.
+    """
+    output.backprop = BackpropMetadata(
+        op=label,
+        parents=parents,
+        propagate_to_parents=propagate_to_parents,
+    )
+    return output
+
+
+def attach_same_shape(
+    label: str,
+    parents: list[Tensor],
+    output: Tensor,
     gradient_rules: list[Callable[[int, aliases.Number], aliases.Number]],
 ) -> Tensor:
     """
@@ -27,14 +47,34 @@ def attach_backprop_metadata(
         "each parent must have a gradient update rule"
     )
 
-    output.backprop = BackpropMetadata(
-        op=label,
+    return attach_backprop_metadata(
+        label,
         parents=parents,
+        output=output,
         propagate_to_parents=lambda: propagate_same_shape(
             parents, output, gradient_rules
         ),
     )
-    return output
+
+
+def attach_spread(
+    label: str,
+    parent: Tensor,
+    output: Tensor,
+    groups: list[list[int]],
+    gradient_rule: Callable,
+) -> Tensor:
+    """
+    Attach backprop and a grouped gradient rule to a reduction output
+    """
+    return attach_backprop_metadata(
+        label,
+        parents=[parent],
+        output=output,
+        propagate_to_parents=lambda: propagate_spread(
+            parent, output, groups, gradient_rule
+        ),
+    )
 
 
 def propagate_same_shape(

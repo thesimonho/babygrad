@@ -115,7 +115,7 @@ class Tensor:
     def __add__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
         output = Tensor(ops.add(left, right), shape=shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="+",
             parents=[self, t],
             output=output,
@@ -125,7 +125,7 @@ class Tensor:
     def __sub__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
         output = Tensor(ops.sub(left, right), shape=shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="-",
             parents=[self, t],
             output=output,
@@ -137,7 +137,7 @@ class Tensor:
 
     def __neg__(self) -> Tensor:
         output = Tensor(ops.neg(self.data), shape=self.shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="-",
             parents=[self],
             output=output,
@@ -146,7 +146,7 @@ class Tensor:
 
     def __pow__(self, exponent: aliases.Number) -> Tensor:
         output = Tensor(ops.power(self.data, exponent), shape=self.shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="**",
             parents=[self],
             output=output,
@@ -160,7 +160,7 @@ class Tensor:
         output = Tensor(ops.div(left, right), shape=shape)
         # c = a/b = a*1/b = a * 1/(4). dc/da: 1/4 = 1/b
         # c = ab^-1 = (4)/b = 4b^-1. dc/db: -4b^-2 = -4/b^2 = -a/b^2
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="/",
             parents=[self, t],
             output=output,
@@ -173,7 +173,7 @@ class Tensor:
     def __mul__(self, t: Tensor) -> Tensor:
         left, right, shape = lib.broadcast(self.data, t.data, self.shape, t.shape)
         output = Tensor(ops.mul(left, right), shape=shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="*",
             parents=[self, t],
             output=output,
@@ -199,7 +199,7 @@ class Tensor:
 
     def log(self):
         output = Tensor(ops.log(self.data), shape=self.shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="log",
             parents=[self],
             output=output,
@@ -209,7 +209,7 @@ class Tensor:
     def exp(self):
         """For exp, the derivative is itself (the output)"""
         output = Tensor(ops.exp(self.data), shape=self.shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="exp",
             parents=[self],
             output=output,
@@ -218,7 +218,7 @@ class Tensor:
 
     def sqrt(self):
         output = Tensor(ops.sqrt(self.data), shape=self.shape)
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="sqrt",
             parents=[self],
             output=output,
@@ -253,13 +253,12 @@ class Tensor:
             for i in range(len(self.grad)):
                 self.grad[i] += parent_grad[i]
 
-        output.backprop = autograd.BackpropMetadata(
-            op="transpose",
+        return autograd.attach_backprop_metadata(
+            label="transpose",
             parents=[self],
+            output=output,
             propagate_to_parents=propagate,
         )
-
-        return output
 
     def t(self):
         return self.transpose()
@@ -286,14 +285,13 @@ class Tensor:
             shape = tuple(1 for _ in range(len(self.shape)))
 
         output = Tensor(reduced, shape)
-        output.backprop = autograd.BackpropMetadata(
-            op=op.__name__.removeprefix("reduce_"),
-            parents=[self],
-            propagate_to_parents=lambda: autograd.propagate_spread(
-                self, output, groups, gradient_rule
-            ),
+        return autograd.attach_spread(
+            label=op.__name__.removeprefix("reduce_"),
+            parent=self,
+            output=output,
+            groups=groups,
+            gradient_rule=gradient_rule,
         )
-        return output
 
     def sum(self, axis: Optional[int] = None):
         output = self._reduce(

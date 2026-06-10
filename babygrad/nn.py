@@ -61,7 +61,7 @@ class ReLU(Layer):
         output = Tensor([max(0, x) for x in input.data], shape=input.shape)
 
         # attach backprop data so the layer can participate in autograd
-        return autograd.attach_backprop_metadata(
+        return autograd.attach_same_shape(
             label="ReLU",
             parents=[input],
             output=output,
