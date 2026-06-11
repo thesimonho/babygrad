@@ -63,7 +63,7 @@ Instead:
 
 ## Technical constraints
 
-- **Zero external dependencies.** Python standard library only. No NumPy, no PyTorch, no pip packages.
+- **No ML crutches.** The library implements all neural-network and array math by hand using the Python standard library only — no NumPy, PyTorch, tinygrad, or any package that would do the ML work itself. Dev and visualization tooling (e.g. matplotlib, graphviz, tqdm, pytest) is acceptable and declared in `pyproject.toml`.
 - **Pure Python.** No C extensions, no GPU, no ctypes.
 - **Python 3.14** can be assumed.
 

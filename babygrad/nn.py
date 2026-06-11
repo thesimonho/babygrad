@@ -24,6 +24,13 @@ class Sequential:
         self.layers = layers
         self.trace: dict[str, Trace] = {}
 
+    def parameters(self) -> list[Tensor]:
+        parameter_layers = []
+        for layer in self.layers:
+            parameter_layers.extend(layer.parameters())
+
+        return parameter_layers
+
     def forward(self, x: Tensor, plot: bool = False):
         for i, layer in enumerate(self.layers):
             x = layer.forward(x)
@@ -33,10 +40,37 @@ class Sequential:
         return x, self.trace if plot else None
 
 
+class Optimizer(ABC):
+    def __init__(self, parameters: list[Tensor], lr: float):
+        self.parameters = parameters
+        self.lr = lr
+
+    @abstractmethod
+    def step(self):
+        pass
+
+    def zero_grad(self):
+        for p in self.parameters:
+            for i in range(len(p.grad)):
+                p.grad[i] = 0.0
+
+
+class SGD(Optimizer):
+    def step(self):
+        for p in self.parameters:
+            assert len(p.grad) == len(p.data)
+            for i in range(len(p.grad)):
+                p.data[i] -= p.grad[i] * self.lr
+
+
 class Layer(ABC):
     @property
     def name(self) -> str:
         return type(self).__name__
+
+    @abstractmethod
+    def parameters(self) -> list[Tensor]:
+        pass
 
     @abstractmethod
     def forward(self, input: Tensor) -> Tensor:
@@ -52,11 +86,17 @@ class Linear(Layer):
         bias = _init_weights((1, output_size))
         self.bias = Tensor(bias, shape=(1, output_size))
 
+    def parameters(self):
+        return [self.bias, self.weights]
+
     def forward(self, input: Tensor) -> Tensor:
         return input @ self.weights + self.bias
 
 
 class ReLU(Layer):
+    def parameters(self):
+        return []
+
     def forward(self, input: Tensor) -> Tensor:
         output = Tensor([max(0, x) for x in input.data], shape=input.shape)
 
@@ -70,6 +110,9 @@ class ReLU(Layer):
 
 
 class Softmax(Layer):
+    def parameters(self):
+        return []
+
     def forward(self, input: Tensor) -> Tensor:
         """
         Softmax row = exp(row - row_max) / sum(exp(row - row_max))
