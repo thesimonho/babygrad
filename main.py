@@ -1,7 +1,8 @@
 from pathlib import Path
+from tqdm import tqdm
 from babygrad.data import load_csv, prepare_supervised_data
-from babygrad.nn import CCE, ReLU, Sequential, Linear, Softmax
-from babygrad.plot import histogram
+from babygrad.nn import CCE, SGD, ReLU, Sequential, Linear, Softmax
+from babygrad.metrics import accuracy
 
 
 def train_iris():
@@ -18,14 +19,21 @@ def train_iris():
             Softmax(),
         ]
     )
-    y_pred, weights = model.forward(splits.x_train, plot=True)
-    print(y_pred)
-    loss = CCE(splits.y_train, y_pred)
-    print(loss)
-    loss.backward()
+    optimizer = SGD(model.parameters(), 0.1)
 
-    if weights:
-        histogram(weights, "iris_weights.png")
+    epochs = 30
+    progress = tqdm(range(epochs), desc="training")
+    for _ in progress:
+        optimizer.zero_grad()
+        y_pred, weights = model.forward(splits.x_train, plot=True)
+        loss = CCE(splits.y_train, y_pred)
+        acc = accuracy(splits.y_train, y_pred)
+        progress.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
+        loss.backward()
+        optimizer.step()
+
+    # if weights:
+    #     histogram(weights, "iris_weights.png")
 
 
 if __name__ == "__main__":

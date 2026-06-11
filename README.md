@@ -161,7 +161,7 @@ Everything else runs without it.
 
 - [x] **SGD optimizer** — parameter updates, learning rate
 - [x] **Training loop** — forward, loss, backward, step
-- [x] **Zero grads between steps** — TODO: `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
+- [x] **Zero grads between steps** — `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
 
 ### Phase 5: Going Deeper
 
