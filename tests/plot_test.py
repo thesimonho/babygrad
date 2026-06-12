@@ -5,7 +5,7 @@ matplotlib.use("Agg")
 from babygrad.aliases import History
 from babygrad.nn import Linear, ReLU, Sequential
 from babygrad.recorder import Recorder
-from babygrad.plot import Visualizer, _bin_counts
+from babygrad.viz.plot import Visualizer, _bin_counts
 from babygrad.tensor import Tensor
 
 
