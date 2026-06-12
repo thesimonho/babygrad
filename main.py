@@ -3,6 +3,7 @@ from tqdm import tqdm
 from babygrad.data import load_csv, prepare_supervised_data
 from babygrad.nn import CCE, SGD, ReLU, Sequential, Linear, Softmax
 from babygrad.metrics import accuracy
+from babygrad.viz.plot import PlotVisualizer
 
 from babygrad.recorder import Recorder
 
@@ -30,7 +31,7 @@ def train_iris():
     for i in progress:
         recorder.set_step(i)
         optimizer.zero_grad()
-        y_pred = model.forward(splits.x_train, recorder)
+        y_pred = model.forward(splits.x_train)
         loss = CCE(splits.y_train, y_pred)
         acc = accuracy(splits.y_train, y_pred)
         recorder.record("loss", loss.data[0])
@@ -38,18 +39,18 @@ def train_iris():
 
         progress.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
         loss.backward()
-        model.report_grads(recorder)
+        recorder.capture(loss)
         optimizer.step()
 
-    # visualizer = Visualizer()
+    visualizer = PlotVisualizer()
     # visualizer.plot_scalar("loss", recorder.history)
     # visualizer.plot_scalar("acc", recorder.history)
     # visualizer.plot_ridge("Linear_0/weights", recorder.history)
     # visualizer.plot_ridge(
-    #     "Linear_0/grad", recorder.history, clip_quantiles=(0.01, 0.99)
+    #     "Linear_0/weights/grad", recorder.history, clip_quantiles=(0.01, 0.99)
     # )
     # visualizer.plot_ridge(
-    #     "Linear_2/grad", recorder.history, clip_quantiles=(0.01, 0.99)
+    #     "Linear_2/weights/grad", recorder.history, clip_quantiles=(0.01, 0.99)
     # )
 
 

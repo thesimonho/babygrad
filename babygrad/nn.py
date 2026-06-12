@@ -1,10 +1,8 @@
 import math
 from abc import ABC, abstractmethod
 from random import Random
-from typing import Optional
 
-from babygrad.aliases import Number, Report, Shape
-from babygrad.recorder import Recorder
+from babygrad.aliases import Number, Shape
 from babygrad.tensor import Tensor
 
 from . import ops
@@ -20,6 +18,13 @@ class Sequential:
     def __init__(self, layers: list[Layer]):
         self.layers = layers
 
+        # stamp durable identities once: layers get an indexed name,
+        # parameters get that name as their prefix ("Linear_0/weights")
+        for i, layer in enumerate(layers):
+            layer.name = f"{layer.name}_{i}"
+            for parameter in layer.parameters():
+                parameter.name = f"{layer.name}/{parameter.name}"
+
     def parameters(self) -> list[Tensor]:
         parameter_layers = []
         for layer in self.layers:
@@ -27,28 +32,16 @@ class Sequential:
 
         return parameter_layers
 
-    def forward(self, x: Tensor, recorder: Optional[Recorder] = None) -> Tensor:
-        for i, layer in enumerate(self.layers):
-            x = layer.forward(x)
-            if recorder:
-                # fan-out: relative tags from the report become full,
-                # layer-namespaced history tags ("Linear_0/weights")
-                for relative_tag, value in layer.report(x).items():
-                    recorder.record(f"{layer.name}_{i}/{relative_tag}", value)
+    def forward(self, x: Tensor) -> Tensor:
+        for layer in self.layers:
+            ops.set_scope(layer.name)
+            try:
+                x = layer.forward(x)
+            finally:
+                ops.clear_scope()
+            x.name = f"{layer.name}/result"
 
         return x
-
-    def report_grads(self, recorder: Recorder) -> None:
-        """Record each layer's gradient report under namespaced tags.
-
-        Gradients are only meaningful between backward() and the next
-        zero_grad(), so the training loop must call this after backward()
-        rather than letting forward() record them (it runs while gradients
-        are freshly zeroed).
-        """
-        for i, layer in enumerate(self.layers):
-            for relative_tag, value in layer.report_grad().items():
-                recorder.record(f"{layer.name}_{i}/{relative_tag}", value)
 
 
 class Optimizer(ABC):
@@ -80,9 +73,9 @@ class Layer(ABC):
     and edge data for the graph
     """
 
-    @property
-    def name(self) -> str:
-        return type(self).__name__
+    def __init__(self):
+        # bare type name by default; Sequential re-stamps it with an index
+        self.name = type(self).__name__
 
     @abstractmethod
     def parameters(self) -> list[Tensor]:
@@ -92,33 +85,25 @@ class Layer(ABC):
     def forward(self, input: Tensor) -> Tensor:
         pass
 
-    def report(self, result: Tensor) -> Report:
-        return {}
-
-    def report_grad(self) -> Report:
-        return {}
-
 
 class Linear(Layer):
     def __init__(self, input_size, output_size):
+        super().__init__()
+
         weights = _init_weights((input_size, output_size))
         self.weights = Tensor(weights, shape=(input_size, output_size))
+        self.weights.name = "weights"
 
         # add bias for each output column
         bias = _init_weights((1, output_size))
         self.bias = Tensor(bias, shape=(1, output_size))
+        self.bias.name = "bias"
 
     def parameters(self):
         return [self.bias, self.weights]
 
     def forward(self, input: Tensor) -> Tensor:
         return input @ self.weights + self.bias
-
-    def report(self, result) -> Report:
-        return {"result": result.copy().data, "weights": self.weights.copy().data}
-
-    def report_grad(self) -> Report:
-        return {"grad": self.weights.grad.copy()}
 
 
 class ReLU(Layer):

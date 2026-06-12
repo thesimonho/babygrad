@@ -10,6 +10,22 @@ if TYPE_CHECKING:
     from .tensor import Tensor
 
 
+# The layer scope ops are created under, set by whoever drives the layers
+# (Sequential) before each layer runs and cleared after. Ops created outside
+# any layer (losses, ad-hoc tensor math) carry scope None.
+_active_scope: str | None = None
+
+
+def set_scope(name: str) -> None:
+    global _active_scope
+    _active_scope = name
+
+
+def clear_scope() -> None:
+    global _active_scope
+    _active_scope = None
+
+
 class Op(ABC):
     """
     Glue together tensors via an operation.
@@ -20,6 +36,7 @@ class Op(ABC):
 
     def __init__(self, inputs: list[Tensor]):
         self.inputs = inputs
+        self.scope = _active_scope
 
     def forward(self) -> Tensor:
         """

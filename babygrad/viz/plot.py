@@ -15,7 +15,7 @@ _RIDGE_BINS = 50
 _RIDGE_ROW_HEIGHT = 1.6
 
 
-class Visualizer:
+class PlotVisualizer:
     def plot_scalar(self, tag: Tag, history: History, save_path: str | None = None):
         """Line-plot a scalar series (loss, accuracy, ...) over steps."""
         series = history[tag]

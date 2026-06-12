@@ -43,19 +43,6 @@ brew install graphviz
 
 Everything else runs without it.
 
-## Visualization
-
-Training visualization is split into two pieces with different dependency weights:
-
-- **`Recorder`** — collection. A per-training-run object created alongside the optimizer. Stateful: it owns the recorded history and is the only piece that touches training code. Stdlib-pure, so the core library trains and records without any rendering dependencies installed.
-- **`Visualizer`** — rendering, in the `babygrad/viz` package. Owns all matplotlib/graphviz coupling. Stateless: consumes recorded history as plain data (keyed by step and tag) and produces figures, post-hoc — train first, then show or save. Because the boundary is plain data, history can come from a live Recorder, a test fixture, or a saved file.
-
-How data reaches the `Recorder`:
-
-- **Scalars** (loss, accuracy) — handed over by the training loop each epoch.
-- **Activations** — `Sequential.forward` accepts an optional recorder and pushes each layer's report as it runs. Layers themselves know nothing about recorders; per-layer-type logic (e.g. ReLU dead-neuron stats vs Linear weight distributions) lives on the visualization side.
-- **Time axis** — history is keyed by a neutral step counter, not "epoch". With full-batch gradient descent a step equals an epoch; the design survives mini-batching unchanged.
-
 ## Roadmap
 
 ### Phase 1: Tensor Foundations

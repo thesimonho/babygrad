@@ -49,6 +49,7 @@ class Tensor:
         self.shape = shape
         self.grad = [0.0 for _ in self.data]
         self.producer: ops.Op | None = None
+        self.name: str | None = None
 
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the tensor contents."""
