@@ -1,3 +1,7 @@
+"""
+AI written helpers for formatting data for display.
+"""
+
 from collections.abc import Sequence
 from types import EllipsisType
 from typing import TypeVar

@@ -1,10 +1,11 @@
 import math
 from abc import ABC, abstractmethod
 from random import Random
-from babygrad.aliases import Shape, Number
+from typing import Optional
+from babygrad.aliases import Shape, Number, Report
 from babygrad.tensor import Tensor
+from babygrad.observer import Observer
 from . import autograd
-from dataclasses import dataclass
 
 
 def _init_weights(shape: Shape, seed: int = 42) -> list[Number]:
@@ -13,16 +14,9 @@ def _init_weights(shape: Shape, seed: int = 42) -> list[Number]:
     return weights
 
 
-@dataclass
-class Trace:
-    data: list[Number]
-    shape: Shape
-
-
 class Sequential:
     def __init__(self, layers: list[Layer]):
         self.layers = layers
-        self.trace: dict[str, Trace] = {}
 
     def parameters(self) -> list[Tensor]:
         parameter_layers = []
@@ -31,13 +25,28 @@ class Sequential:
 
         return parameter_layers
 
-    def forward(self, x: Tensor, plot: bool = False):
+    def forward(self, x: Tensor, observer: Optional[Observer] = None) -> Tensor:
         for i, layer in enumerate(self.layers):
             x = layer.forward(x)
-            if plot:
-                self.trace[f"{layer.name}_{i}"] = Trace(data=x.data, shape=x.shape)
+            if observer:
+                # fan-out: relative tags from the report become full,
+                # layer-namespaced history tags ("Linear_0/weights")
+                for relative_tag, value in layer.report(x).items():
+                    observer.record(f"{layer.name}_{i}/{relative_tag}", value)
 
-        return x, self.trace if plot else None
+        return x
+
+    def report_grads(self, observer: Observer) -> None:
+        """Record each layer's gradient report under namespaced tags.
+
+        Gradients are only meaningful between backward() and the next
+        zero_grad(), so the training loop must call this after backward()
+        rather than letting forward() record them (it runs while gradients
+        are freshly zeroed).
+        """
+        for i, layer in enumerate(self.layers):
+            for relative_tag, value in layer.report_grad().items():
+                observer.record(f"{layer.name}_{i}/{relative_tag}", value)
 
 
 class Optimizer(ABC):
@@ -76,6 +85,12 @@ class Layer(ABC):
     def forward(self, input: Tensor) -> Tensor:
         pass
 
+    def report(self, result: Tensor) -> Report:
+        return {}
+
+    def report_grad(self) -> Report:
+        return {}
+
 
 class Linear(Layer):
     def __init__(self, input_size, output_size):
@@ -91,6 +106,14 @@ class Linear(Layer):
 
     def forward(self, input: Tensor) -> Tensor:
         return input @ self.weights + self.bias
+
+    def report(self, result) -> Report:
+        return {"result": result.copy().data, "weights": self.weights.copy().data}
+
+    def report_grad(self) -> Report:
+        # copy the grad list itself: Tensor.copy() builds a fresh tensor
+        # whose .grad is zero-initialised, not a copy of this one's
+        return {"grad": self.weights.grad.copy()}
 
 
 class ReLU(Layer):
