@@ -167,7 +167,7 @@ def test_reshape_valid():
         t.reshape((1, 4))
 
 
-def flatten():
+def test_flatten():
     t = Tensor([1, 2, 3, 4, 5, 6], (2, 3))
     f = t.flatten()
     assert t.data == f.data

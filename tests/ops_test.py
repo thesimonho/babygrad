@@ -1,5 +1,5 @@
 import pytest
-from babygrad.ops import add, sub, mul, matmul, dot, div
+from babygrad.kernels import add, sub, mul, matmul, dot, div
 
 
 def test_add():

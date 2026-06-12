@@ -8,8 +8,8 @@ from babygrad.tensor import Tensor
 
 def propagate_output_grad(output: Tensor, grad: list[float]) -> None:
     output.grad = grad
-    assert output.backprop is not None
-    output.backprop.propagate_to_parents()
+    assert output.producer is not None
+    output.producer.backward()
 
 
 def test_add_tracks_parents():
@@ -18,10 +18,10 @@ def test_add_tracks_parents():
 
     output = left + right
 
-    assert output.backprop is not None
-    assert output.backprop.op == "+"
-    assert output.backprop.parents[0] is left
-    assert output.backprop.parents[1] is right
+    assert output.producer is not None
+    assert output.producer.label == "+"
+    assert output.producer.inputs[0] is left
+    assert output.producer.inputs[1] is right
 
 
 def test_add_gradients():
@@ -229,9 +229,9 @@ def test_matmul_tracks_parents():
 
     output = left @ right
 
-    assert output.backprop is not None
-    assert output.backprop.parents[0] is left
-    assert output.backprop.parents[1] is right
+    assert output.producer is not None
+    assert output.producer.inputs[0] is left
+    assert output.producer.inputs[1] is right
 
 
 def _weighted_matmul_loss(

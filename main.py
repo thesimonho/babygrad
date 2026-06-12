@@ -4,7 +4,6 @@ from babygrad.data import load_csv, prepare_supervised_data
 from babygrad.nn import CCE, SGD, ReLU, Sequential, Linear, Softmax
 from babygrad.metrics import accuracy
 
-from babygrad.plot import Visualizer
 from babygrad.observer import Observer
 
 
@@ -42,16 +41,16 @@ def train_iris():
         model.report_grads(observer)
         optimizer.step()
 
-    visualizer = Visualizer()
-    visualizer.plot_scalar("loss", observer.history)
-    visualizer.plot_scalar("acc", observer.history)
-    visualizer.plot_ridge("Linear_0/weights", observer.history)
-    visualizer.plot_ridge(
-        "Linear_0/grad", observer.history, clip_quantiles=(0.01, 0.99)
-    )
-    visualizer.plot_ridge(
-        "Linear_2/grad", observer.history, clip_quantiles=(0.01, 0.99)
-    )
+    # visualizer = Visualizer()
+    # visualizer.plot_scalar("loss", observer.history)
+    # visualizer.plot_scalar("acc", observer.history)
+    # visualizer.plot_ridge("Linear_0/weights", observer.history)
+    # visualizer.plot_ridge(
+    #     "Linear_0/grad", observer.history, clip_quantiles=(0.01, 0.99)
+    # )
+    # visualizer.plot_ridge(
+    #     "Linear_2/grad", observer.history, clip_quantiles=(0.01, 0.99)
+    # )
 
 
 if __name__ == "__main__":

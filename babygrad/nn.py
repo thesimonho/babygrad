@@ -2,10 +2,12 @@ import math
 from abc import ABC, abstractmethod
 from random import Random
 from typing import Optional
-from babygrad.aliases import Shape, Number, Report
-from babygrad.tensor import Tensor
+
+from babygrad.aliases import Number, Report, Shape
 from babygrad.observer import Observer
-from . import autograd
+from babygrad.tensor import Tensor
+
+from . import ops
 
 
 def _init_weights(shape: Shape, seed: int = 42) -> list[Number]:
@@ -73,6 +75,11 @@ class SGD(Optimizer):
 
 
 class Layer(ABC):
+    """
+    Layer outputs compose via op Nodes, which give them backprop data
+    and edge data for the graph
+    """
+
     @property
     def name(self) -> str:
         return type(self).__name__
@@ -111,8 +118,6 @@ class Linear(Layer):
         return {"result": result.copy().data, "weights": self.weights.copy().data}
 
     def report_grad(self) -> Report:
-        # copy the grad list itself: Tensor.copy() builds a fresh tensor
-        # whose .grad is zero-initialised, not a copy of this one's
         return {"grad": self.weights.grad.copy()}
 
 
@@ -121,15 +126,7 @@ class ReLU(Layer):
         return []
 
     def forward(self, input: Tensor) -> Tensor:
-        output = Tensor([max(0, x) for x in input.data], shape=input.shape)
-
-        # attach backprop data so the layer can participate in autograd
-        return autograd.attach_same_shape(
-            label="ReLU",
-            parents=[input],
-            output=output,
-            gradient_rules=[lambda i, grad: grad if input.data[i] > 0 else 0],
-        )
+        return ops.ReLU([input]).forward()
 
 
 class Softmax(Layer):
@@ -137,12 +134,6 @@ class Softmax(Layer):
         return []
 
     def forward(self, input: Tensor) -> Tensor:
-        """
-        Softmax row = exp(row - row_max) / sum(exp(row - row_max))
-
-        Composition using tensor methods means the output here already
-        contains autograd backprop data.
-        """
         z = input - input.max(axis=1)
         exps = z.exp()
         row = exps / exps.sum(axis=1)
