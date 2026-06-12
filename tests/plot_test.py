@@ -4,7 +4,7 @@ matplotlib.use("Agg")
 
 from babygrad.aliases import History
 from babygrad.nn import Linear, ReLU, Sequential
-from babygrad.observer import Observer
+from babygrad.recorder import Recorder
 from babygrad.plot import Visualizer, _bin_counts
 from babygrad.tensor import Tensor
 
@@ -60,39 +60,39 @@ def test_bin_counts_clamps_outliers_into_edge_bins():
 
 
 def test_forward_fans_out_report_under_namespaced_tags():
-    observer = Observer()
+    recorder = Recorder()
     model = Sequential([Linear(2, 3), ReLU()])
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
-    observer.set_step(0)
-    model.forward(x, observer)
+    recorder.set_step(0)
+    model.forward(x, recorder)
 
-    assert "Linear_0/weights" in observer.history
-    assert "Linear_0/result" in observer.history
+    assert "Linear_0/weights" in recorder.history
+    assert "Linear_0/result" in recorder.history
     # parameterless layers report nothing, so no ReLU tags appear
-    assert not any(tag.startswith("ReLU") for tag in observer.history)
+    assert not any(tag.startswith("ReLU") for tag in recorder.history)
 
 
 def test_recorded_weights_are_snapshots_not_references():
-    observer = Observer()
+    recorder = Recorder()
     layer = Linear(2, 3)
     model = Sequential([layer])
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
-    observer.set_step(0)
-    model.forward(x, observer)
+    recorder.set_step(0)
+    model.forward(x, recorder)
     layer.weights.data[0] += 100.0
-    observer.set_step(1)
-    model.forward(x, observer)
+    recorder.set_step(1)
+    model.forward(x, recorder)
 
-    recorded = observer.history["Linear_0/weights"]
+    recorded = recorder.history["Linear_0/weights"]
     before, after = recorded[0], recorded[1]
     assert isinstance(before, list) and isinstance(after, list)
     assert before[0] != after[0]
     assert before[0] != layer.weights.data[0]
 
 
-def test_forward_without_observer_records_nothing():
+def test_forward_without_recorder_records_nothing():
     model = Sequential([Linear(2, 3)])
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
@@ -102,26 +102,26 @@ def test_forward_without_observer_records_nothing():
 
 
 def test_report_grads_fans_out_namespaced_tags():
-    observer = Observer()
+    recorder = Recorder()
     model = Sequential([Linear(2, 3), ReLU()])
 
-    observer.set_step(0)
-    model.report_grads(observer)
+    recorder.set_step(0)
+    model.report_grads(recorder)
 
-    assert "Linear_0/grad" in observer.history
-    assert not any(tag.startswith("ReLU") for tag in observer.history)
+    assert "Linear_0/grad" in recorder.history
+    assert not any(tag.startswith("ReLU") for tag in recorder.history)
 
 
 def test_recorded_grads_survive_zero_grad():
-    observer = Observer()
+    recorder = Recorder()
     layer = Linear(2, 3)
     model = Sequential([layer])
     layer.weights.grad[0] = 7.0
 
-    observer.set_step(0)
-    model.report_grads(observer)
+    recorder.set_step(0)
+    model.report_grads(recorder)
     layer.weights.grad[0] = 0.0  # what zero_grad() does, in place
 
-    recorded = observer.history["Linear_0/grad"][0]
+    recorded = recorder.history["Linear_0/grad"][0]
     assert isinstance(recorded, list)
     assert recorded[0] == 7.0

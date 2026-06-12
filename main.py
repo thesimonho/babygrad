@@ -4,7 +4,7 @@ from babygrad.data import load_csv, prepare_supervised_data
 from babygrad.nn import CCE, SGD, ReLU, Sequential, Linear, Softmax
 from babygrad.metrics import accuracy
 
-from babygrad.observer import Observer
+from babygrad.recorder import Recorder
 
 
 def train_iris():
@@ -13,7 +13,7 @@ def train_iris():
     dataset.target_col_idx = 4
     splits = prepare_supervised_data(dataset)
 
-    observer = Observer()
+    recorder = Recorder()
     model = Sequential(
         [
             Linear(splits.x_train.ncol, 128),
@@ -28,28 +28,28 @@ def train_iris():
 
     progress = tqdm(range(epochs), desc="training")
     for i in progress:
-        observer.set_step(i)
+        recorder.set_step(i)
         optimizer.zero_grad()
-        y_pred = model.forward(splits.x_train, observer)
+        y_pred = model.forward(splits.x_train, recorder)
         loss = CCE(splits.y_train, y_pred)
         acc = accuracy(splits.y_train, y_pred)
-        observer.record("loss", loss.data[0])
-        observer.record("acc", acc)
+        recorder.record("loss", loss.data[0])
+        recorder.record("acc", acc)
 
         progress.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
         loss.backward()
-        model.report_grads(observer)
+        model.report_grads(recorder)
         optimizer.step()
 
     # visualizer = Visualizer()
-    # visualizer.plot_scalar("loss", observer.history)
-    # visualizer.plot_scalar("acc", observer.history)
-    # visualizer.plot_ridge("Linear_0/weights", observer.history)
+    # visualizer.plot_scalar("loss", recorder.history)
+    # visualizer.plot_scalar("acc", recorder.history)
+    # visualizer.plot_ridge("Linear_0/weights", recorder.history)
     # visualizer.plot_ridge(
-    #     "Linear_0/grad", observer.history, clip_quantiles=(0.01, 0.99)
+    #     "Linear_0/grad", recorder.history, clip_quantiles=(0.01, 0.99)
     # )
     # visualizer.plot_ridge(
-    #     "Linear_2/grad", observer.history, clip_quantiles=(0.01, 0.99)
+    #     "Linear_2/grad", recorder.history, clip_quantiles=(0.01, 0.99)
     # )
 
 

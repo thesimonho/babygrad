@@ -2,7 +2,7 @@ from collections import defaultdict
 from babygrad.aliases import History, HistoryValue, Step, Tag
 
 
-class Observer:
+class Recorder:
     """Collects tagged training data, keyed by the loop-supplied step."""
 
     def __init__(self):

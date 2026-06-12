@@ -4,7 +4,7 @@ from random import Random
 from typing import Optional
 
 from babygrad.aliases import Number, Report, Shape
-from babygrad.observer import Observer
+from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
 
 from . import ops
@@ -27,18 +27,18 @@ class Sequential:
 
         return parameter_layers
 
-    def forward(self, x: Tensor, observer: Optional[Observer] = None) -> Tensor:
+    def forward(self, x: Tensor, recorder: Optional[Recorder] = None) -> Tensor:
         for i, layer in enumerate(self.layers):
             x = layer.forward(x)
-            if observer:
+            if recorder:
                 # fan-out: relative tags from the report become full,
                 # layer-namespaced history tags ("Linear_0/weights")
                 for relative_tag, value in layer.report(x).items():
-                    observer.record(f"{layer.name}_{i}/{relative_tag}", value)
+                    recorder.record(f"{layer.name}_{i}/{relative_tag}", value)
 
         return x
 
-    def report_grads(self, observer: Observer) -> None:
+    def report_grads(self, recorder: Recorder) -> None:
         """Record each layer's gradient report under namespaced tags.
 
         Gradients are only meaningful between backward() and the next
@@ -48,7 +48,7 @@ class Sequential:
         """
         for i, layer in enumerate(self.layers):
             for relative_tag, value in layer.report_grad().items():
-                observer.record(f"{layer.name}_{i}/{relative_tag}", value)
+                recorder.record(f"{layer.name}_{i}/{relative_tag}", value)
 
 
 class Optimizer(ABC):
