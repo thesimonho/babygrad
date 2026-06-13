@@ -53,21 +53,21 @@ def test_dot_wrong_length():
 
 
 def test_matmul():
-    x = [1, 2, 3, 4, 5, 6]
-    y = [1, 2, 3, 4, 5, 6]
+    x: list[float] = [1, 2, 3, 4, 5, 6]
+    y: list[float] = [1, 2, 3, 4, 5, 6]
     res = matmul(x, y, (2, 3), (3, 2))
     assert res == [22, 28, 49, 64]
 
 
 def test_matmul_square():
-    x = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    y = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    x: list[float] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    y: list[float] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     res = matmul(x, y, (3, 3), (3, 3))
     assert res == [30, 36, 42, 66, 81, 96, 102, 126, 150]
 
 
 def test_matmul_identity():
-    i = [1, 0, 0, 0, 1, 0, 0, 0, 1]
-    x = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    i: list[float] = [1, 0, 0, 0, 1, 0, 0, 0, 1]
+    x: list[float] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     res = matmul(i, x, (3, 3), (3, 3))
     assert res == [1, 2, 3, 4, 5, 6, 7, 8, 9]
