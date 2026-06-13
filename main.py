@@ -42,7 +42,7 @@ def train_iris():
         recorder.capture(loss)
         optimizer.step()
 
-    visualizer = PlotVisualizer()
+    # visualizer = PlotVisualizer(recorder.history)
     # visualizer.plot_scalar("loss", recorder.history)
     # visualizer.plot_scalar("acc", recorder.history)
     # visualizer.plot_ridge("Linear_0/weights", recorder.history)

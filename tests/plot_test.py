@@ -16,7 +16,7 @@ RIDGE_HISTORY: History = {"Linear_0/weights": {0: [0.1, 0.2, 0.3], 1: [0.2, 0.3,
 def test_plot_scalar_saves_figure(tmp_path):
     save_path = tmp_path / "loss.png"
 
-    PlotVisualizer().plot_scalar("loss", SCALAR_HISTORY, save_path=str(save_path))
+    PlotVisualizer(SCALAR_HISTORY).plot_scalar("loss", save_path=str(save_path))
 
     assert save_path.exists()
 
@@ -24,7 +24,7 @@ def test_plot_scalar_saves_figure(tmp_path):
 def test_plot_ridge_saves_figure(tmp_path):
     save_path = tmp_path / "weights.png"
 
-    PlotVisualizer().plot_ridge("Linear_0/weights", RIDGE_HISTORY, save_path=str(save_path))
+    PlotVisualizer(RIDGE_HISTORY).plot_ridge("Linear_0/weights", save_path=str(save_path))
 
     assert save_path.exists()
 
@@ -33,7 +33,7 @@ def test_plot_ridge_handles_identical_values(tmp_path):
     constant_history: History = {"w": {0: [0.5, 0.5], 1: [0.5, 0.5]}}
     save_path = tmp_path / "constant.png"
 
-    PlotVisualizer().plot_ridge("w", constant_history, save_path=str(save_path))
+    PlotVisualizer(constant_history).plot_ridge("w", save_path=str(save_path))
 
     assert save_path.exists()
 
@@ -44,8 +44,8 @@ def test_plot_ridge_clip_quantiles_saves_figure(tmp_path):
     }
     save_path = tmp_path / "clipped.png"
 
-    PlotVisualizer().plot_ridge(
-        "grads", outlier_history, save_path=str(save_path), clip_quantiles=(0.01, 0.99)
+    PlotVisualizer(outlier_history).plot_ridge(
+        "grads", save_path=str(save_path), clip_quantiles=(0.01, 0.99)
     )
 
     assert save_path.exists()
@@ -119,6 +119,7 @@ def test_capture_records_grads():
 
     assert "Linear_0/weights/grad" in recorder.history
     recorded = recorder.history["Linear_0/weights/grad"][0]
+    assert isinstance(recorded, list)
     assert any(value != 0.0 for value in recorded)
 
 

@@ -16,9 +16,12 @@ _RIDGE_ROW_HEIGHT = 1.6
 
 
 class PlotVisualizer:
-    def plot_scalar(self, tag: Tag, history: History, save_path: str | None = None):
+    def __init__(self, history: History):
+        self.history = history
+
+    def plot_scalar(self, tag: Tag, save_path: str | None = None):
         """Line-plot a scalar series (loss, accuracy, ...) over steps."""
-        series = history[tag]
+        series = self.history[tag]
         steps = sorted(series)
         values = [series[step] for step in steps]
 
@@ -32,7 +35,6 @@ class PlotVisualizer:
     def plot_ridge(
         self,
         tag: Tag,
-        history: History,
         save_path: str | None = None,
         clip_quantiles: tuple[float, float] | None = None,
     ):
@@ -46,7 +48,7 @@ class PlotVisualizer:
         (0.01, 0.99) to span the bins over that quantile range instead of
         min/max; outliers beyond it pile into the edge bins.
         """
-        series = history[tag]
+        series = self.history[tag]
         steps = sorted(series)
         rows = cast("list[list[float]]", [series[step] for step in steps])
 
