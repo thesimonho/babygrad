@@ -3,10 +3,13 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import TYPE_CHECKING
 
-from babygrad.aliases import History, HistoryValue, Step, Tag
+from babygrad.types import History, HistoryValue, NodeKind, Step, Tag
 
 if TYPE_CHECKING:
     from babygrad.tensor import Tensor
+
+
+_RECORDABLE = {NodeKind.PARAMETER, NodeKind.LAYER_OUTPUT}
 
 
 class Recorder:
@@ -23,11 +26,13 @@ class Recorder:
         self.history[tag][self.step] = value
 
     def capture(self, root: Tensor):
-        """Walk the graph backward from `root`, recording every named tensor.
+        """Walk the graph backward from `root`, recording recordable nodes.
 
-        Each named tensor contributes two tags: its data under its own name
-        and its gradient under "<name>/grad". Values are copied because
-        parameters mutate in place and gradients are zeroed between steps.
+        A node is recordable by its kind (parameters and layer outputs), not
+        by whether it happens to have a name. Each contributes two tags: its
+        data under its name and its gradient under "<name>/grad". Values are
+        copied because parameters mutate in place and gradients are zeroed
+        between steps.
 
         Coverage is bounded by ancestry — only tensors that contributed to
         `root` are reachable, so capturing from the loss sees everything.
@@ -42,7 +47,7 @@ class Recorder:
             return
         visited.add(id(tensor))
 
-        if tensor.name is not None:
+        if tensor.kind in _RECORDABLE and tensor.name is not None:
             self.record(tensor.name, list(tensor.data))
             self.record(f"{tensor.name}/grad", list(tensor.grad))
 

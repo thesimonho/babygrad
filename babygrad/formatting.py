@@ -6,7 +6,6 @@ from collections.abc import Sequence
 from types import EllipsisType
 from typing import TypeVar
 
-
 TRUNCATION_LIMIT = 8
 MAX_DECIMAL_PLACES = 4
 ELLIPSIS = Ellipsis

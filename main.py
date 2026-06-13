@@ -26,13 +26,14 @@ def train_iris():
 
     epochs = 30
     optimizer = SGD(model.parameters(), 0.1)
+    criterion = CCE()
 
     progress = tqdm(range(epochs), desc="training")
     for i in progress:
         recorder.set_step(i)
         optimizer.zero_grad()
         y_pred = model.forward(splits.x_train)
-        loss = CCE(splits.y_train, y_pred)
+        loss = criterion.forward(splits.y_train, y_pred)
         acc = accuracy(splits.y_train, y_pred)
         recorder.record("loss", loss.data[0])
         recorder.record("acc", acc)

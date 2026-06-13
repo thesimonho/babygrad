@@ -27,7 +27,7 @@ def test_mse():
     y_true = Tensor([1, 2, 3, 4], shape=(2, 2))
     y_pred = Tensor([1, 1, 5, 0], shape=(2, 2))
 
-    loss = MSE(y_true, y_pred)
+    loss = MSE().forward(y_true, y_pred)
 
     assert loss == Tensor([21 / 4], shape=(1, 1))
 
@@ -36,7 +36,7 @@ def test_cce_one_hot_targets():
     y_true = Tensor([0, 1, 0, 1, 0, 0], shape=(2, 3))
     y_pred = Tensor([0.1, 0.8, 0.1, 0.7, 0.2, 0.1], shape=(2, 3))
 
-    loss = CCE(y_true, y_pred)
+    loss = CCE().forward(y_true, y_pred)
 
     assert loss.shape == (1, 1)
     assert loss.data == approx([-(math.log(0.8) + math.log(0.7)) / 2])

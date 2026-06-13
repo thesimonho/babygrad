@@ -2,8 +2,8 @@ import math
 from abc import ABC, abstractmethod
 from random import Random
 
-from babygrad.aliases import Number, Shape
 from babygrad.tensor import Tensor
+from babygrad.types import NodeKind, Number, Shape
 
 from . import ops
 
@@ -33,13 +33,18 @@ class Sequential:
         return parameter_layers
 
     def forward(self, x: Tensor) -> Tensor:
+        # whatever is fed in is the graph's entrypoint
+        x.kind = NodeKind.INPUT
+
         for layer in self.layers:
             ops.set_scope(layer.name)
             try:
                 x = layer.forward(x)
             finally:
                 ops.clear_scope()
+            # a named layer boundary: a more specific role than OP_RESULT
             x.name = f"{layer.name}/result"
+            x.kind = NodeKind.LAYER_OUTPUT
 
         return x
 
@@ -93,11 +98,13 @@ class Linear(Layer):
         weights = _init_weights((input_size, output_size))
         self.weights = Tensor(weights, shape=(input_size, output_size))
         self.weights.name = "weights"
+        self.weights.kind = NodeKind.PARAMETER
 
         # add bias for each output column
         bias = _init_weights((1, output_size))
         self.bias = Tensor(bias, shape=(1, output_size))
         self.bias.name = "bias"
+        self.bias.kind = NodeKind.PARAMETER
 
     def parameters(self):
         return [self.bias, self.weights]
@@ -125,15 +132,34 @@ class Softmax(Layer):
         return row
 
 
-def CCE(y_true: Tensor, y_pred: Tensor) -> Tensor:
+class Loss(ABC):
+    """Base for loss functions.
+
+    forward() is the funnel: it stamps the supervision target and the loss
+    scalar, then delegates the math to the subclass. The loss result is an
+    op output, but LOSS is its more specific role, so it overrides OP_RESULT.
     """
-    Categorical cross-entropy for one hot targets
-    """
-    return -(y_true * y_pred.log()).sum(axis=1).mean()
+
+    def forward(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
+        y_true.kind = NodeKind.TARGET
+        result = self.compute(y_true, y_pred)
+        result.kind = NodeKind.LOSS
+        return result
+
+    @abstractmethod
+    def compute(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
+        pass
 
 
-def MSE(y_true: Tensor, y_pred: Tensor) -> Tensor:
-    """
-    Mean squared error for scalar targets
-    """
-    return ((y_true - y_pred) ** 2).mean()
+class CCE(Loss):
+    """Categorical cross-entropy for one hot targets."""
+
+    def compute(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
+        return -(y_true * y_pred.log()).sum(axis=1).mean()
+
+
+class MSE(Loss):
+    """Mean squared error for scalar targets."""
+
+    def compute(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
+        return ((y_true - y_pred) ** 2).mean()

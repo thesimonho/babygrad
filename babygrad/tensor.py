@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Optional
 
 from . import autograd, formatting, ops, types
+from .types import NodeKind
 
 
 class Tensor:
@@ -50,6 +51,8 @@ class Tensor:
         self.grad = [0.0 for _ in self.data]
         self.producer: ops.Op | None = None
         self.name: str | None = None
+        # role in the graph; whoever creates the tensor for a purpose stamps it
+        self.kind: NodeKind | None = None
 
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the tensor contents."""

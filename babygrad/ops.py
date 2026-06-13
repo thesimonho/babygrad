@@ -5,6 +5,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, ClassVar, Optional
 
 from . import autograd, kernels, lib, types
+from .types import NodeKind
 
 if TYPE_CHECKING:
     from .tensor import Tensor
@@ -33,6 +34,7 @@ class Op(ABC):
     """
 
     label: ClassVar[str]
+    kind: ClassVar[NodeKind] = NodeKind.OP
 
     def __init__(self, inputs: list[Tensor]):
         self.inputs = inputs
@@ -44,9 +46,11 @@ class Op(ABC):
         """
         from .tensor import Tensor
 
-        data, shape = self.calculate()
+        data, shape = self.compute()
         self.output = Tensor(data, shape)
         self.output.producer = self
+        # default role for any computed tensor; Sequential/Loss may override
+        self.output.kind = NodeKind.OP_RESULT
         return self.output
 
     @abstractmethod
@@ -57,7 +61,7 @@ class Op(ABC):
         pass
 
     @abstractmethod
-    def calculate(self) -> tuple[list[aliases.Number], aliases.Shape]:
+    def compute(self) -> tuple[list[types.Number], types.Shape]:
         """
         Raw op kernel for calculating the output value.
         """
@@ -97,7 +101,7 @@ class MatMul(BinaryOp):
 
     label = "@"
 
-    def calculate(self):
+    def compute(self):
         # inners must match
         if self.a.ncol != self.b.nrow:
             raise ValueError("Dimension mismatch.")
@@ -125,7 +129,7 @@ class MatMul(BinaryOp):
 class Transpose(UnaryOp):
     label = "transpose"
 
-    def calculate(self):
+    def compute(self):
         data, shape = lib.transpose_flat_data(self.x.data, self.x.shape)
         return data, shape
 
@@ -142,7 +146,7 @@ class Transpose(UnaryOp):
 class Copy(UnaryOp):
     label = "copy"
 
-    def calculate(self):
+    def compute(self):
         return list(self.x.data), self.x.shape
 
     def backward(self):
@@ -157,7 +161,7 @@ class Reshape(UnaryOp):
         super().__init__(inputs)
         self.target_shape = target_shape
 
-    def calculate(self):
+    def compute(self):
         if math.prod(self.x.shape) != math.prod(self.target_shape):
             raise ValueError("New shape must contain the same number of items")
         return list(self.x.data), self.target_shape
@@ -186,7 +190,7 @@ class Reduce(UnaryOp):
         super().__init__(inputs)
         self.axis = axis
 
-    def calculate(self):
+    def compute(self):
         if self.axis is not None:
             # normalize negative axis
             if self.axis < 0:
@@ -269,7 +273,7 @@ class Elementwise(Op):
         super().__init__(inputs)
         self.operands = {}
 
-    def calculate(self):
+    def compute(self):
         if len(self.inputs) == 2:
             a = self.inputs[0]
             b = self.inputs[1]
@@ -359,7 +363,7 @@ class Pow(UnaryOp, Elementwise):
         super().__init__(inputs)
         self.exponent = exponent
 
-    def calculate(self):
+    def compute(self):
         x = self.inputs[0]
         self.operands = {"x": x.data}
         return self.op(self.operands["x"], self.exponent), x.shape
