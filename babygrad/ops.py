@@ -4,7 +4,7 @@ import math
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, ClassVar, Optional
 
-from . import aliases, autograd, kernels, lib
+from . import autograd, kernels, lib, types
 
 if TYPE_CHECKING:
     from .tensor import Tensor
@@ -212,7 +212,7 @@ class Reduce(UnaryOp):
         autograd.propagate_spread(self.x, self.output, self.groups, self.gradient_rule)
 
     @abstractmethod
-    def gradient_rule(self, i, parent, output, grad, group) -> list[aliases.Number]:
+    def gradient_rule(self, i, parent, output, grad, group) -> list[types.Number]:
         pass
 
 
@@ -285,7 +285,7 @@ class Elementwise(Op):
         autograd.propagate_same_shape(self.inputs, self.output, self.gradient_rules)
 
     @abstractmethod
-    def gradient_rules(self, i, grad) -> list[aliases.Number]:
+    def gradient_rules(self, i, grad) -> list[types.Number]:
         pass
 
 
@@ -355,7 +355,7 @@ class Pow(UnaryOp, Elementwise):
     label = "^"
     op = staticmethod(kernels.power)
 
-    def __init__(self, inputs, exponent: aliases.Number):
+    def __init__(self, inputs, exponent: types.Number):
         super().__init__(inputs)
         self.exponent = exponent
 

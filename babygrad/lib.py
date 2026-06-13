@@ -1,17 +1,17 @@
+import math
 from collections import defaultdict
 from typing import Callable
 from warnings import deprecated
 
-from . import aliases
-import math
+from . import types
 
 
 def broadcast(
-    left: list[aliases.Number],
-    right: list[aliases.Number],
-    left_shape: aliases.Shape,
-    right_shape: aliases.Shape,
-) -> tuple[list[aliases.Number], list[aliases.Number], aliases.Shape]:
+    left: list[types.Number],
+    right: list[types.Number],
+    left_shape: types.Shape,
+    right_shape: types.Shape,
+) -> tuple[list[types.Number], list[types.Number], types.Shape]:
     """Align 2 data lists by broadcasting values across dimensions where possible.
 
     Compare shapes from the rightmost dimension moving left.
@@ -71,11 +71,11 @@ def broadcast(
 
 
 def unbroadcast(
-    data: list[aliases.Number],
-    current: aliases.Shape,
-    target: aliases.Shape,
+    data: list[types.Number],
+    current: types.Shape,
+    target: types.Shape,
     op: Callable = sum,
-) -> list[aliases.Number]:
+) -> list[types.Number]:
     """
     Unbroadcast current data to target shape.
     Only called in tensor ops where parent broadcasting could potentially have happened.
@@ -106,10 +106,10 @@ def unbroadcast(
 
 
 def _expand_dims(
-    data: list[aliases.Number],
-    current_shape: aliases.Shape,
-    target_shape: aliases.Shape,
-) -> list[aliases.Number]:
+    data: list[types.Number],
+    current_shape: types.Shape,
+    target_shape: types.Shape,
+) -> list[types.Number]:
     """
     Expand current dimensions that are == 1 to repeat towards a target shape.
     """
@@ -149,7 +149,7 @@ def _expand_dims(
     return output
 
 
-def _pad_shape_to_rank(current: aliases.Shape, target: aliases.Shape) -> aliases.Shape:
+def _pad_shape_to_rank(current: types.Shape, target: types.Shape) -> types.Shape:
     """
     Left pad a shape to the same rank as a target shape.
     Example:
@@ -167,7 +167,7 @@ def _pad_shape_to_rank(current: aliases.Shape, target: aliases.Shape) -> aliases
     return tuple(padded)
 
 
-def _coordinate_to_index(shape: aliases.Shape, coordinate: tuple[int, ...]) -> int:
+def _coordinate_to_index(shape: types.Shape, coordinate: tuple[int, ...]) -> int:
     """
     Convert a tensor coordinate to the correct index location in a flat data list.
     Example: coordinate(0,0) -> list[0], coordinate(0,1) -> list[1]
@@ -187,7 +187,7 @@ def _coordinate_to_index(shape: aliases.Shape, coordinate: tuple[int, ...]) -> i
     return idx
 
 
-def _index_to_coordinate(shape: aliases.Shape, index: int) -> tuple[int, ...]:
+def _index_to_coordinate(shape: types.Shape, index: int) -> tuple[int, ...]:
     """
     Convert a list index to a tensor coordinate given a specific shape.
     Example: list[0] -> coordinate(0,0)
@@ -212,7 +212,7 @@ def _index_to_coordinate(shape: aliases.Shape, index: int) -> tuple[int, ...]:
 
 
 @deprecated("Use _get_axis_groups instead. Kept here for learning purposes.")
-def _get_axis_groups_old(shape: aliases.Shape, axis: int):
+def _get_axis_groups_old(shape: types.Shape, axis: int):
     if axis >= len(shape):
         raise IndexError("Axis out of bounds for shape")
 
@@ -230,7 +230,7 @@ def _get_axis_groups_old(shape: aliases.Shape, axis: int):
     return list(groups.values())
 
 
-def _get_axis_groups(shape: aliases.Shape, axis: int) -> list[list[int]]:
+def _get_axis_groups(shape: types.Shape, axis: int) -> list[list[int]]:
     """
     Return a list of lists of flat indexes that would be reduced together.
 
@@ -256,7 +256,7 @@ def _get_axis_groups(shape: aliases.Shape, axis: int) -> list[list[int]]:
     return list(output.values())
 
 
-def transpose_flat_data(data, shape: aliases.Shape):
+def transpose_flat_data(data, shape: types.Shape):
     if len(shape) != 2:
         raise ValueError("Requires a 2D tensor")
 

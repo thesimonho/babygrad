@@ -4,7 +4,7 @@ import math
 from collections import defaultdict
 from typing import Optional
 
-from . import aliases, autograd, formatting, ops
+from . import autograd, formatting, ops, types
 
 
 class Tensor:
@@ -41,8 +41,8 @@ class Tensor:
 
     def __init__(
         self,
-        data: list[aliases.Number],
-        shape: aliases.Shape,
+        data: list[types.Number],
+        shape: types.Shape,
     ) -> None:
         assert len(data) == math.prod(shape), "Tensor data has incorrect shape"
         self.data = data
@@ -66,7 +66,7 @@ class Tensor:
         equal_shape = self.shape == t.shape
         return equal_content and equal_shape
 
-    def __getitem__(self, key: int | tuple[int, ...]) -> aliases.Number | Tensor:
+    def __getitem__(self, key: int | tuple[int, ...]) -> types.Number | Tensor:
         """Get item at position in tensor.
 
         Cases:
@@ -137,7 +137,7 @@ class Tensor:
     def __neg__(self) -> Tensor:
         return ops.Neg([self]).forward()
 
-    def __pow__(self, exponent: aliases.Number) -> Tensor:
+    def __pow__(self, exponent: types.Number) -> Tensor:
         return ops.Pow([self], exponent).forward()
 
     def __truediv__(self, t: Tensor) -> Tensor:
@@ -161,7 +161,7 @@ class Tensor:
     def copy(self):
         return ops.Copy([self]).forward()
 
-    def reshape(self, shape: aliases.Shape):
+    def reshape(self, shape: types.Shape):
         return ops.Reshape([self], shape).forward()
 
     def flatten(self):

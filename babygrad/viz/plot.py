@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 
-from babygrad.aliases import History, Step, Tag
+from babygrad.types import History, Step, Tag
 
 _RIDGE_BINS = 50
 _RIDGE_ROW_HEIGHT = 1.6
