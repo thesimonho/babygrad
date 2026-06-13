@@ -267,3 +267,8 @@ def transpose_flat_data(data, shape: aliases.Shape):
             output.append(data[r * ncol + c])
 
     return output, (ncol, nrow)
+
+
+def argmax(values: list) -> int:
+    """Return the index of the largest value (the first one on ties)."""
+    return values.index(max(values))

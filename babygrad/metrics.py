@@ -1,9 +1,5 @@
 from babygrad.tensor import Tensor
-
-
-def _argmax(values: list) -> int:
-    """Return the index of the largest value (the first one on ties)."""
-    return values.index(max(values))
+from babygrad.lib import argmax
 
 
 def accuracy(y_true: Tensor, y_pred: Tensor) -> float:
@@ -13,8 +9,8 @@ def accuracy(y_true: Tensor, y_pred: Tensor) -> float:
     ncol = y_pred.ncol
     matches = 0
     for start in range(0, len(y_pred.data), ncol):
-        predicted_class = _argmax(y_pred.data[start : start + ncol])
-        true_class = _argmax(y_true.data[start : start + ncol])
+        predicted_class = argmax(y_pred.data[start : start + ncol])
+        true_class = argmax(y_true.data[start : start + ncol])
         if predicted_class == true_class:
             matches += 1
 
