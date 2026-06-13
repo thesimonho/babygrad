@@ -159,14 +159,19 @@ Everything else runs without it.
 
 ### Phase 4: Training
 
+[Notebook demo](./notebooks/phase4_optimization_training.ipynb)
+
 - [x] **SGD optimizer** — parameter updates, learning rate
 - [x] **Training loop** — forward, loss, backward, step
 - [x] **Zero grads between steps** — `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
 
 ### Phase 5: Going Deeper
 
+[Notebook demo](./notebooks/phase5_visualization.ipynb)
+
 - [x] **Multi-layer perceptron** — stacking linear + activation layers
-- [ ] **Vanishing gradients** — observing the problem firsthand with deep stacks
+- [x] **Visualization** — plotting training history and graphing the network, the lens for what follows
+- [x] **Vanishing gradients** — observing the problem firsthand with deep stacks
 - [ ] **Weight initialization** — Xavier/Glorot, He
   - [Understanding the difficulty of training deep feedforward neural networks](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) — Glorot & Bengio, 2010
   - [Delving Deep into Rectifiers](https://arxiv.org/abs/1502.01852) — He et al., 2015

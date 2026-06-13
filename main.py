@@ -3,7 +3,6 @@ from tqdm import tqdm
 from babygrad.data import load_csv, prepare_supervised_data
 from babygrad.nn import CCE, SGD, ReLU, Sequential, Linear, Softmax
 from babygrad.metrics import accuracy
-from babygrad.viz.plot import PlotVisualizer
 
 from babygrad.recorder import Recorder
 
@@ -42,6 +41,14 @@ def train_iris():
         loss.backward()
         recorder.capture(loss)
         optimizer.step()
+
+    y_pred = model.forward(splits.x_train)
+    loss = criterion.forward(splits.y_train, y_pred)
+
+    # visualizer = GraphVisualizer(loss)
+    # visualizer.draw_architecture(save_path="./architecture.svg")
+    # visualizer.draw_combined(save_path="./combined.svg")
+    # visualizer.draw_computation(save_path="./computation.svg")
 
     # visualizer = PlotVisualizer(recorder.history)
     # visualizer.plot_scalar("loss", recorder.history)

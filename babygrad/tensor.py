@@ -53,6 +53,8 @@ class Tensor:
         self.name: str | None = None
         # role in the graph; whoever creates the tensor for a purpose stamps it
         self.kind: NodeKind | None = None
+        # layer the tensor belongs to, for graph clustering (None = outside any)
+        self.scope: str | None = None
 
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the tensor contents."""

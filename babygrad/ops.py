@@ -51,6 +51,8 @@ class Op(ABC):
         self.output.producer = self
         # default role for any computed tensor; Sequential/Loss may override
         self.output.kind = NodeKind.OP_RESULT
+        # the op's layer scope flows to the tensor it produces
+        self.output.scope = self.scope
         return self.output
 
     @abstractmethod

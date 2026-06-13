@@ -1,7 +1,4 @@
-"""Post-hoc rendering of recorded training history.
-
-AI written helpers for plotting.
-"""
+"""Post-hoc rendering of recorded training history."""
 
 from typing import cast
 

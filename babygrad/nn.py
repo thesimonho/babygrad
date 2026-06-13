@@ -24,6 +24,7 @@ class Sequential:
             layer.name = f"{layer.name}_{i}"
             for parameter in layer.parameters():
                 parameter.name = f"{layer.name}/{parameter.name}"
+                parameter.scope = layer.name
 
     def parameters(self) -> list[Tensor]:
         parameter_layers = []
@@ -142,7 +143,12 @@ class Loss(ABC):
 
     def forward(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
         y_true.kind = NodeKind.TARGET
-        result = self.compute(y_true, y_pred)
+        # scope the loss ops so they cluster into their own box, like a layer
+        ops.set_scope(type(self).__name__)
+        try:
+            result = self.compute(y_true, y_pred)
+        finally:
+            ops.clear_scope()
         result.kind = NodeKind.LOSS
         return result
 
