@@ -16,7 +16,7 @@ RIDGE_HISTORY: History = {"Linear_0/weights": {0: [0.1, 0.2, 0.3], 1: [0.2, 0.3,
 def test_plot_scalar_saves_figure(tmp_path):
     save_path = tmp_path / "loss.png"
 
-    PlotVisualizer(SCALAR_HISTORY).plot_scalar("loss", save_path=str(save_path))
+    PlotVisualizer(SCALAR_HISTORY).plot_scalar(["loss"], save_path=str(save_path))
 
     assert save_path.exists()
 

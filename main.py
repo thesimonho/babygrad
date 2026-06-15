@@ -1,10 +1,12 @@
 from pathlib import Path
-from tqdm import tqdm
-from babygrad.data import load_csv, prepare_supervised_data
-from babygrad.nn import CCE, SGD, ReLU, Sequential, Linear, Softmax
-from babygrad.metrics import accuracy
 
+from tqdm import tqdm
+
+from babygrad.data import load_csv, prepare_supervised_data
+from babygrad.metrics import accuracy
+from babygrad.nn import CCE, SGD, Linear, ReLU, Sequential, Softmax
 from babygrad.recorder import Recorder
+from babygrad.viz.plot import PlotVisualizer
 
 
 def train_iris():
@@ -37,29 +39,32 @@ def train_iris():
         recorder.record("loss", loss.data[0])
         recorder.record("acc", acc)
 
+        # validation
+        y_pred = model.forward(splits.x_val)
+        validation_loss = criterion.forward(splits.y_val, y_pred)
+        recorder.record("val_loss", validation_loss.data[0])
+
         progress.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
         loss.backward()
         recorder.capture(loss)
         optimizer.step()
 
-    y_pred = model.forward(splits.x_train)
-    loss = criterion.forward(splits.y_train, y_pred)
+    y_pred = model.forward(splits.x_test)
+    loss = criterion.forward(splits.y_test, y_pred)
+    acc = accuracy(splits.y_test, y_pred)
+    print(f"test loss: {loss.data[0]:.4f}, test acc: {acc:.3f}")
 
     # visualizer = GraphVisualizer(loss)
     # visualizer.draw_architecture(save_path="./architecture.svg")
     # visualizer.draw_combined(save_path="./combined.svg")
     # visualizer.draw_computation(save_path="./computation.svg")
 
-    # visualizer = PlotVisualizer(recorder.history)
-    # visualizer.plot_scalar("loss", recorder.history)
-    # visualizer.plot_scalar("acc", recorder.history)
-    # visualizer.plot_ridge("Linear_0/weights", recorder.history)
-    # visualizer.plot_ridge(
-    #     "Linear_0/weights/grad", recorder.history, clip_quantiles=(0.01, 0.99)
-    # )
-    # visualizer.plot_ridge(
-    #     "Linear_2/weights/grad", recorder.history, clip_quantiles=(0.01, 0.99)
-    # )
+    visualizer = PlotVisualizer(recorder.history)
+    visualizer.plot_scalar(["loss", "val_loss"])
+    visualizer.plot_scalar(["acc"])
+    visualizer.plot_ridge("Linear_0/weights")
+    visualizer.plot_ridge("Linear_0/weights/grad", clip_quantiles=(0.01, 0.99))
+    visualizer.plot_ridge("Linear_2/weights/grad", clip_quantiles=(0.01, 0.99))
 
 
 if __name__ == "__main__":

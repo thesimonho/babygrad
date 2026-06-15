@@ -163,7 +163,7 @@ Everything else runs without it.
 
 - [x] **SGD optimizer** — parameter updates, learning rate
 - [x] **Training loop** — forward, loss, backward, step
-- [ ] **Validation and test** - phases plus metrics
+- [x] **Validation and test** - phases plus metrics
 - [ ] **Batching** - full, mini-batch training
 - [x] **Zero grads between steps** — `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
 

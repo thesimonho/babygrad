@@ -16,17 +16,21 @@ class PlotVisualizer:
     def __init__(self, history: History):
         self.history = history
 
-    def plot_scalar(self, tag: Tag, save_path: str | None = None):
-        """Line-plot a scalar series (loss, accuracy, ...) over steps."""
-        series = self.history[tag]
-        steps = sorted(series)
-        values = [series[step] for step in steps]
+    def plot_scalar(self, tags: list[Tag], save_path: str | None = None):
+        """Line-plots a scalar series (loss, accuracy, ...) over steps."""
+        assert isinstance(tags, list), "plot_scalar() takes a list of tags"
 
         fig, ax = plt.subplots()
-        ax.plot(steps, values)
-        ax.set_title(tag)
+
+        for tag in tags:
+            series = self.history[tag]
+            steps = sorted(series)
+            values = [series[step] for step in steps]
+            ax.plot(steps, values, label=tag)
+
         ax.set_xlabel("step")
         ax.set_ylabel("value")
+        ax.legend()
         _show_or_save(fig, save_path)
 
     def plot_ridge(
