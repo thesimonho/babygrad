@@ -87,10 +87,6 @@ def matmul(
     return output
 
 
-def rectify(a: list[types.Number]) -> list[types.Number]:
-    return [max(0, x) for x in a]
-
-
 def reduce_sum(a: list[types.Number]) -> types.Number:
     return sum(a)
 
@@ -107,3 +103,15 @@ def reduce_max(a: list[types.Number]) -> types.Number:
 
 def reduce_min(a: list[types.Number]) -> types.Number:
     return min(a)
+
+
+def rectify(a: list[types.Number]) -> list[types.Number]:
+    return [max(0, x) for x in a]
+
+
+def sigmoid(a: list[types.Number]) -> list[types.Number]:
+    return [1 / (1 + math.exp(-x)) for x in a]
+
+
+def tanh(a: list[types.Number]) -> list[types.Number]:
+    return [math.tanh(x) for x in a]

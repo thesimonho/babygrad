@@ -114,6 +114,22 @@ class Linear(Layer):
         return input @ self.weights + self.bias
 
 
+class Sigmoid(Layer):
+    def parameters(self):
+        return []
+
+    def forward(self, input: Tensor) -> Tensor:
+        return ops.Sigmoid([input]).forward()
+
+
+class Tanh(Layer):
+    def parameters(self):
+        return []
+
+    def forward(self, input: Tensor) -> Tensor:
+        return ops.Tanh([input]).forward()
+
+
 class ReLU(Layer):
     def parameters(self):
         return []

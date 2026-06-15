@@ -405,3 +405,19 @@ class ReLU(UnaryOp, Elementwise):
 
     def gradient_rules(self, i, grad):
         return [grad if self.operands["x"][i] > 0 else 0]
+
+
+class Sigmoid(UnaryOp, Elementwise):
+    label = "sigmoid"
+    op = staticmethod(kernels.sigmoid)
+
+    def gradient_rules(self, i, grad):
+        return [grad * self.output.data[i] * (1 - self.output.data[i])]
+
+
+class Tanh(UnaryOp, Elementwise):
+    label = "tanh"
+    op = staticmethod(kernels.tanh)
+
+    def gradient_rules(self, i, grad):
+        return [grad * (1 - self.output.data[i] ** 2)]

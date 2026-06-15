@@ -122,7 +122,7 @@ Everything else runs without it.
 [Notebook demo](./notebooks/phase2_forward_nn_primitives.ipynb)
 
 - [x] **Linear layer** — weights, biases, forward values
-- [x] **Activation functions** — ReLU and softmax forward values
+- [x] **Activation functions** — sigmoid, tanh, ReLU and softmax forward values
 - [x] **Sequential model** — run ordered layers from input tensor to `y_pred`
 - [x] **Loss functions** — MSE, cross-entropy loss values
 
@@ -149,7 +149,7 @@ Everything else runs without it.
 - [x] log
 - [x] div
 
-- [x] relu
+- [x] sigmoid, tanh, relu
 - [x] softmax (by composition)
 
 </details>
@@ -163,6 +163,8 @@ Everything else runs without it.
 
 - [x] **SGD optimizer** — parameter updates, learning rate
 - [x] **Training loop** — forward, loss, backward, step
+- [ ] **Validation and test** - phases plus metrics
+- [ ] **Batching** - full, mini-batch training
 - [x] **Zero grads between steps** — `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
 
 ### Phase 5: Going Deeper
