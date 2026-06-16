@@ -64,6 +64,9 @@ class Tensor:
             return f"shape={self.shape}\n{formatting.vector(self.data)}"
         return f"{self.nrow} rows x {self.ncol} cols\n{formatting.matrix(self.data, self.nrow, self.ncol)}"
 
+    def __len__(self) -> int:
+        return self.nrow
+
     def __eq__(self, t):
         if not isinstance(t, Tensor):
             return NotImplemented
