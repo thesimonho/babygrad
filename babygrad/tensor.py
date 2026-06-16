@@ -71,6 +71,14 @@ class Tensor:
         equal_shape = self.shape == t.shape
         return equal_content and equal_shape
 
+    def __iter__(self):
+        if self.ndim == 1:
+            for value in self.data:
+                yield value
+        else:
+            for i in range(self.nrow):
+                yield Tensor(self._get_row_data(i), shape=(self.ncol,))
+
     @overload
     def __getitem__(self, key: int) -> types.Number | Tensor: ...
     @overload
@@ -90,9 +98,8 @@ class Tensor:
             start, end, step = key.indices(self.nrow)
             data = []
             for r in range(start, end, step):
-                row = self.data[r * self.ncol : r * self.ncol + self.ncol]
-                data.extend(row)
-            return Tensor(data, ((end - start) // step, self.ncol))
+                data.extend(self._get_row_data(r))
+            return Tensor(data, (len(range(start, end, step)), self.ncol))
 
         if isinstance(key, int):
             norm_key = (key,)
@@ -118,8 +125,7 @@ class Tensor:
         elif len(norm_key) == 1 and self.ndim == 2:
             row = norm_key[0]
             if row >= 0 and row < self.nrow:
-                data = self.data[row * self.ncol : row * self.ncol + self.ncol]
-                return Tensor(data, shape=(self.ncol,))
+                return Tensor(self._get_row_data(row), shape=(self.ncol,))
             else:
                 raise IndexError(
                     f"Row index {row} is out of bounds. Row count = {self.nrow}"
@@ -133,6 +139,12 @@ class Tensor:
                 )
         else:
             raise ValueError("Too many passed dimensions")
+
+    def _get_row_data(self, idx: int) -> list[types.Number]:
+        """
+        Return an entire row of raw data by index
+        """
+        return self.data[idx * self.ncol : idx * self.ncol + self.ncol]
 
     def backward(self):
         """

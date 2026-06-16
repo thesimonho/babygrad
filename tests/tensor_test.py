@@ -91,6 +91,13 @@ def test_getitem_2d_slice_negative_start():
     assert t[-2:] == Tensor([6, 7, 8, 9, 10, 11], shape=(2, 3))
 
 
+def test_getitem_2d_slice_strided_uneven():
+    # step does not divide the span evenly: range(0, 5, 2) -> rows 0, 2, 4
+    # row count must be len(range(...)) == 3, not (end - start) // step == 2
+    t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], shape=(5, 3))
+    assert t[0:5:2] == Tensor([0, 1, 2, 6, 7, 8, 12, 13, 14], shape=(3, 3))
+
+
 def test_add_vector_vector():
     res = Tensor([2, 2], shape=(2, 1)) + Tensor([5, 1], shape=(2, 1))
     assert res.data == [7, 3]
