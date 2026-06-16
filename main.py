@@ -1,9 +1,9 @@
-import random
 from pathlib import Path
 from tqdm import tqdm
 from statistics import mean
+from math import ceil
 
-from babygrad.data import load_csv, prepare_supervised_data
+from babygrad.data import load_csv, prepare_supervised_data, create_minibatches
 from babygrad.tensor import Tensor
 from babygrad.metrics import accuracy
 from babygrad.nn import CCE, SGD, Linear, ReLU, Sequential, Softmax
@@ -32,38 +32,26 @@ def train_iris():
     optimizer = SGD(model.parameters(), 0.1)
     criterion = CCE()
 
+    n_batches = ceil(splits.x_train.nrow / batch_size)
     progress_epoch = tqdm(range(epochs), desc="train (epochs)")
+    progress_batch = tqdm(
+        total=n_batches,
+        desc="train (batch)",
+        leave=False,
+        position=1,
+    )
+
     for e in progress_epoch:
         recorder.set_step(e)
 
-        batch_idx = list(range(0, splits.x_train.nrow))
-        random.shuffle(batch_idx)
-        random_x_data = [splits.x_train[i : i + 1] for i in batch_idx]
-        flat_x = []
-        for x in random_x_data:
-            flat_x.extend(x.data)
-        random_x_train = Tensor(flat_x, (len(random_x_data), splits.x_train.ncol))
-
-        random_y_data = [splits.y_train[i : i + 1] for i in batch_idx]
-        flat_y = []
-        for y in random_y_data:
-            flat_y.extend(y.data)
-        random_y_train = Tensor(flat_y, (len(random_y_data), splits.y_train.ncol))
-
-        progress_batch = tqdm(
-            range(0, random_x_train.nrow, batch_size),
-            desc="train (batch)",
-            leave=False,
-            position=1,
-        )
+        minibatches = create_minibatches(splits.x_train, splits.y_train, batch_size)
+        progress_batch.reset()
 
         accum_loss = []
         accum_acc = []
         loss: Tensor | None = None
-        for b in progress_batch:
+        for x, y in minibatches:
             optimizer.zero_grad()
-            x = random_x_train[b : b + batch_size]
-            y = random_y_train[b : b + batch_size]
 
             y_pred = model.forward(x)
             loss = criterion.forward(y, y_pred)
@@ -72,6 +60,7 @@ def train_iris():
             accum_acc.append(acc)
 
             progress_batch.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
+            progress_batch.update()
             loss.backward()
             optimizer.step()
 
@@ -84,6 +73,8 @@ def train_iris():
         recorder.record("loss", mean(accum_loss))
         recorder.record("acc", mean(accum_acc))
         recorder.record("val_loss", validation_loss.data[0])
+
+    progress_batch.close()
 
     y_pred = model.forward(splits.x_test)
     loss = criterion.forward(splits.y_test, y_pred)

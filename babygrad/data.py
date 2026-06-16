@@ -1,9 +1,11 @@
 import csv
 import random
 from dataclasses import dataclass, replace
+from typing import Iterator
 from pathlib import Path
 
-from . import formatting, tensor
+from .tensor import Tensor
+from . import formatting
 
 
 @dataclass
@@ -41,12 +43,12 @@ class Dataset:
 
 @dataclass
 class DataSplit:
-    x_train: tensor.Tensor
-    y_train: tensor.Tensor
-    x_val: tensor.Tensor
-    y_val: tensor.Tensor
-    x_test: tensor.Tensor
-    y_test: tensor.Tensor
+    x_train: Tensor
+    y_train: Tensor
+    x_val: Tensor
+    y_val: Tensor
+    x_test: Tensor
+    y_test: Tensor
 
 
 def _maybe_float(value):
@@ -142,8 +144,8 @@ def split_feature_target(data: Dataset):
     )
 
 
-def to_tensor(data: Dataset) -> tensor.Tensor:
-    return tensor.Tensor(data.flat_rows(), shape=(data.nrow, data.ncol))
+def to_tensor(data: Dataset) -> Tensor:
+    return Tensor(data.flat_rows(), shape=(data.nrow, data.ncol))
 
 
 def prepare_supervised_data(data: Dataset):
@@ -169,3 +171,25 @@ def prepare_supervised_data(data: Dataset):
         x_test=t_test,
         y_test=t_test_target,
     )
+
+
+def create_minibatches(
+    x: Tensor, y: Tensor, batch_size: int = 32
+) -> Iterator[tuple[Tensor, Tensor]]:
+    idx_ordered = list(range(x.nrow))
+    random.shuffle(idx_ordered)
+    random_x = _get_data_by_idx(x, idx_ordered)
+    random_y = _get_data_by_idx(y, idx_ordered)
+
+    assert len(random_x) == len(random_y)
+
+    for i in range(0, random_x.nrow, batch_size):
+        yield random_x[i : i + batch_size], random_y[i : i + batch_size]
+
+
+def _get_data_by_idx(data: Tensor, order: list[int]) -> Tensor:
+    reordered = [data[i : i + 1] for i in order]
+    flat = []
+    for row in reordered:
+        flat.extend(row.data)
+    return Tensor(flat, (len(reordered), data.ncol))
