@@ -174,7 +174,7 @@ Everything else runs without it.
 - [x] **Multi-layer perceptron** — stacking linear + activation layers
 - [x] **Visualization** — plotting training history and graphing the network, the lens for what follows
 - [x] **Vanishing gradients** — observing the problem firsthand with deep stacks
-- [ ] **Weight initialization** — Xavier/Glorot, He
+- [x] **Weight initialization** — Xavier/Glorot, He
   - [Understanding the difficulty of training deep feedforward neural networks](http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf) — Glorot & Bengio, 2010
   - [Delving Deep into Rectifiers](https://arxiv.org/abs/1502.01852) — He et al., 2015
 - [ ] **Batch normalization**

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from typing import Optional, overload
+from typing import overload
 
 from . import autograd, formatting, ops, types
 from .types import NodeKind
@@ -210,14 +210,14 @@ class Tensor:
     def t(self):
         return self.transpose()
 
-    def sum(self, axis: Optional[int] = None):
+    def sum(self, axis: int | None = None):
         return ops.Sum([self], axis).forward()
 
-    def mean(self, axis: Optional[int] = None):
+    def mean(self, axis: int | None = None):
         return ops.Mean([self], axis).forward()
 
-    def max(self, axis: Optional[int] = None):
+    def max(self, axis: int | None = None):
         return ops.Max([self], axis).forward()
 
-    def min(self, axis: Optional[int] = None):
+    def min(self, axis: int | None = None):
         return ops.Min([self], axis).forward()

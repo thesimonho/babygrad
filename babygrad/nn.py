@@ -8,10 +8,45 @@ from babygrad.types import NodeKind, Number, Shape
 from . import ops
 
 
-def _init_weights(shape: Shape, seed: int = 42) -> list[Number]:
-    rng = Random(seed)
-    weights = [rng.uniform(-0.1, 0.1) for _ in range(math.prod([shape[0], shape[1]]))]
-    return weights
+class WeightInitializer(ABC):
+    def __init__(self, shape: Shape, seed: int = 42):
+        self.shape = shape
+        self.rng = Random(seed)
+
+    @abstractmethod
+    def generate(self) -> list[Number]:
+        pass
+
+
+class Uniform(WeightInitializer):
+    def generate(self):
+        weights = [self.rng.uniform(-0.1, 0.1) for _ in range(math.prod(self.shape))]
+        return weights
+
+
+class Glorot(WeightInitializer):
+    """
+    Keep variance independent of the number of inputs so the signal doesn't blow up with large layers.
+    """
+
+    def generate(self):
+        bounds = math.sqrt(6) / math.sqrt(sum(self.shape))
+        weights = [
+            self.rng.uniform(-bounds, bounds) for _ in range(math.prod(self.shape))
+        ]
+        return weights
+
+
+class He(WeightInitializer):
+    """
+    Used for ReLU layers. Negative half is zeroed out so we lose half the variance.
+    Compensate by double the variance of the initial weights.
+    """
+
+    def generate(self):
+        mu, sigma = (0, math.sqrt(2 / self.shape[0]))
+        weights = [self.rng.gauss(mu, sigma) for _ in range(math.prod(self.shape))]
+        return weights
 
 
 class Sequential:
@@ -93,17 +128,25 @@ class Layer(ABC):
 
 
 class Linear(Layer):
-    def __init__(self, input_size, output_size):
+    def __init__(
+        self,
+        input_size,
+        output_size,
+        weight_init: type[WeightInitializer] | None = None,
+    ):
         super().__init__()
 
-        weights = _init_weights((input_size, output_size))
-        self.weights = Tensor(weights, shape=(input_size, output_size))
+        initializer = weight_init or Glorot
+
+        self.weights = Tensor(
+            initializer((input_size, output_size)).generate(),
+            shape=(input_size, output_size),
+        )
         self.weights.name = "weights"
         self.weights.kind = NodeKind.PARAMETER
 
         # add bias for each output column
-        bias = _init_weights((1, output_size))
-        self.bias = Tensor(bias, shape=(1, output_size))
+        self.bias = Tensor([0.0] * output_size, shape=(1, output_size))
         self.bias.name = "bias"
         self.bias.kind = NodeKind.PARAMETER
 
