@@ -1,6 +1,8 @@
-from babygrad.tensor import Tensor
-import pytest
 import math
+
+import pytest
+
+from babygrad.tensor import Tensor
 
 
 def test_unary_ops():
@@ -61,6 +63,32 @@ def test_getitem_2d_scalar_invalid():
         t[0, 3]
     with pytest.raises(IndexError):
         t[1, 3]
+
+
+def test_getitem_2d_slice_contiguous():
+    t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3))
+    print(t[1:3])
+    assert t[1:3] == Tensor([3, 4, 5, 6, 7, 8], shape=(2, 3))
+
+
+def test_getitem_2d_slice_open_stop():
+    t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3))
+    assert t[2:] == Tensor([6, 7, 8, 9, 10, 11], shape=(2, 3))
+
+
+def test_getitem_2d_slice_full():
+    t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3))
+    assert t[:] == Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3))
+
+
+def test_getitem_2d_slice_strided():
+    t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3))
+    assert t[0:4:2] == Tensor([0, 1, 2, 6, 7, 8], shape=(2, 3))
+
+
+def test_getitem_2d_slice_negative_start():
+    t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3))
+    assert t[-2:] == Tensor([6, 7, 8, 9, 10, 11], shape=(2, 3))
 
 
 def test_add_vector_vector():

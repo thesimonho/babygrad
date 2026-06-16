@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from typing import Optional
+from typing import Optional, overload
 
 from . import autograd, formatting, ops, types
 from .types import NodeKind
@@ -71,18 +71,35 @@ class Tensor:
         equal_shape = self.shape == t.shape
         return equal_content and equal_shape
 
-    def __getitem__(self, key: int | tuple[int, ...]) -> types.Number | Tensor:
+    @overload
+    def __getitem__(self, key: int) -> types.Number | Tensor: ...
+    @overload
+    def __getitem__(self, key: tuple[int, ...]) -> types.Number: ...
+    @overload
+    def __getitem__(self, key: slice) -> Tensor: ...
+    def __getitem__(self, key):
         """Get item at position in tensor.
 
         Cases:
+        Slice: always over rows (for batching)
         1D tensor, int key: return value by index
         2D tensor, int key: return row vector at that index
         2D tensor, tuple key: get value at that row:col position using offset
         """
+        if isinstance(key, slice):
+            start, end, step = key.indices(self.nrow)
+            data = []
+            for r in range(start, end, step):
+                row = self.data[r * self.ncol : r * self.ncol + self.ncol]
+                data.extend(row)
+            return Tensor(data, ((end - start) // step, self.ncol))
+
         if isinstance(key, int):
             norm_key = (key,)
         elif isinstance(key, tuple):
             norm_key = key
+        else:
+            raise ValueError("Unsupported index type")
 
         # normalize negative indices
         norm_key = tuple(
