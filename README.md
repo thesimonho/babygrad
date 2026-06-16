@@ -164,7 +164,7 @@ Everything else runs without it.
 - [x] **SGD optimizer** — parameter updates, learning rate
 - [x] **Training loop** — forward, loss, backward, step
 - [x] **Validation and test** - phases plus metrics
-- [ ] **Batching** - full, mini-batch training
+- [x] **Batching** - full, mini-batch training
 - [x] **Zero grads between steps** — `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
 
 ### Phase 5: Going Deeper
@@ -197,6 +197,7 @@ Everything else runs without it.
 - [ ] **Encoder and decoder blocks** — assembling the full architecture
 - [ ] **Masking** — padding masks, causal (look-ahead) masks
   - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Vaswani et al., 2017
+- [ ] **Data pipeline** — lazy loader that tensorizes each batch on the fly (pad + mask variable-length sequences), replacing the up-front tensor batching
 
 ### Phase 8: Modern Transformer Modifications
 
