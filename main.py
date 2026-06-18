@@ -90,11 +90,11 @@ def train_iris():
     # visualizer.draw_combined(save_path="./combined.svg")
     # visualizer.draw_computation(save_path="./computation.svg")
 
-    visualizer = PlotVisualizer(recorder.history)
-    visualizer.plot_scalar(["loss", "val_loss"])
-    visualizer.plot_scalar(["acc"])
-    visualizer.plot_ridge("Linear_0/weights")
-    visualizer.plot_ridge("Linear_3/weights/grad", clip_quantiles=(0.01, 0.99))
+    with PlotVisualizer(recorder.history) as visualizer:
+        visualizer.plot_scalar(["loss", "val_loss"])
+        visualizer.plot_scalar(["acc"])
+        visualizer.plot_ridge("Linear_0/weights")
+        visualizer.plot_ridge("Linear_3/weights/grad", clip_quantiles=(0.01, 0.99))
 
 
 if __name__ == "__main__":

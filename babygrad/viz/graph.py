@@ -246,6 +246,9 @@ class GraphVisualizer:
         )
 
     def _render(self, dot: graphviz.Digraph, save_path: str | None) -> graphviz.Digraph:
+        """Save to save_path when given, otherwise open in the default viewer."""
         if save_path is not None:
             dot.render(outfile=save_path, format="svg", cleanup=True)
+        else:
+            dot.view()
         return dot

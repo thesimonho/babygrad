@@ -1,5 +1,6 @@
 """Post-hoc rendering of recorded training history."""
 
+from types import TracebackType
 from typing import cast
 
 import matplotlib.pyplot as plt
@@ -15,6 +16,21 @@ _RIDGE_ROW_HEIGHT = 1.6
 class PlotVisualizer:
     def __init__(self, history: History):
         self.history = history
+
+    def __enter__(self) -> "PlotVisualizer":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> None:
+        """Display every figure built in the block at once, with a single
+        blocking show. Skipped if the block raised, so an error doesn't stall
+        on an open window."""
+        if exc_type is None:
+            plt.show()
 
     def plot_scalar(self, tags: list[Tag], save_path: str | None = None):
         """Line-plots a scalar series (loss, accuracy, ...) over steps."""
@@ -122,10 +138,9 @@ def _label_ridge_axes(ax: Axes, tag: Tag, steps: list[Step]) -> None:
 
 
 def _show_or_save(fig: Figure, save_path: str | None) -> None:
-    """Show interactively when no path is given, otherwise save and close."""
-    if save_path is None:
-        plt.show()
-    else:
+    """Save and close when a path is given; otherwise leave the figure open
+    for PlotVisualizer.__exit__ to show all figures together."""
+    if save_path is not None:
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
         print(f"Saved {save_path}")
