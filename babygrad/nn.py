@@ -52,6 +52,7 @@ class He(WeightInitializer):
 class Sequential:
     def __init__(self, layers: list[Layer]):
         self.layers = layers
+        self.is_training = True
 
         # stamp durable identities once: layers get an indexed name,
         # parameters get that name as their prefix ("Linear_0/weights")
@@ -68,11 +69,21 @@ class Sequential:
 
         return parameter_layers
 
+    def eval(self, x: Tensor) -> Tensor:
+        """
+        Use for forward pass inference, not training.
+        """
+        self.is_training = False
+        output = self.forward(x)
+        self.is_training = True
+        return output
+
     def forward(self, x: Tensor) -> Tensor:
         # whatever is fed in is the graph's entrypoint
         x.kind = NodeKind.INPUT
 
         for layer in self.layers:
+            layer.is_training = self.is_training
             ops.set_scope(layer.name)
             try:
                 x = layer.forward(x)
@@ -117,10 +128,10 @@ class Layer(ABC):
     def __init__(self):
         # bare type name by default; Sequential re-stamps it with an index
         self.name = type(self).__name__
+        self.is_training = True
 
-    @abstractmethod
     def parameters(self) -> list[Tensor]:
-        pass
+        return []
 
     @abstractmethod
     def forward(self, input: Tensor) -> Tensor:
@@ -158,38 +169,87 @@ class Linear(Layer):
 
 
 class Sigmoid(Layer):
-    def parameters(self):
-        return []
-
     def forward(self, input: Tensor) -> Tensor:
         return ops.Sigmoid([input]).forward()
 
 
 class Tanh(Layer):
-    def parameters(self):
-        return []
-
     def forward(self, input: Tensor) -> Tensor:
         return ops.Tanh([input]).forward()
 
 
 class ReLU(Layer):
-    def parameters(self):
-        return []
-
     def forward(self, input: Tensor) -> Tensor:
         return ops.ReLU([input]).forward()
 
 
 class Softmax(Layer):
-    def parameters(self):
-        return []
-
     def forward(self, input: Tensor) -> Tensor:
         z = input - input.max(axis=1)
         exps = z.exp()
         row = exps / exps.sum(axis=1)
         return row
+
+
+class BatchNorm(Layer):
+    """
+    Normalize per-feature mean/variance across the batch to stop the parameters from changing every batch. Allows use of larger LR etc.
+    """
+
+    def __init__(
+        self,
+        n_features: int,
+        epsilon: float = 1e-5,
+    ):
+        super().__init__()
+        self.epsilon = epsilon
+        self.n_features = n_features
+
+        self.gamma = Tensor([1.0] * n_features, shape=(1, n_features))
+        self.gamma.name = "gamma"
+        self.gamma.kind = NodeKind.PARAMETER
+
+        # add bias for each output column
+        self.beta = Tensor([0.0] * n_features, shape=(1, n_features))
+        self.beta.name = "beta"
+        self.beta.kind = NodeKind.PARAMETER
+
+        self.running_mean = [0.0] * n_features
+        self.running_var = [1.0] * n_features
+
+    def parameters(self):
+        return [self.beta, self.gamma]
+
+    def forward(self, input: Tensor) -> Tensor:
+        mean = (
+            input.mean(axis=0)
+            if self.is_training
+            else Tensor(self.running_mean, shape=((1, self.n_features)))
+        )
+        variance = (
+            ((input - mean) ** 2).mean(axis=0)
+            if self.is_training
+            else Tensor(self.running_var, shape=((1, self.n_features)))
+        )
+
+        epsilon = Tensor([self.epsilon], shape=(1,))
+        std = (variance + epsilon).sqrt()
+
+        if self.is_training:
+            # Moving average of running and current batch stats.
+            # Use raw values: running stats must never become autograd nodes,
+            # otherwise backward would propagate into them
+            self.running_mean = [
+                (0.9 * running + 0.1 * current)
+                for running, current in zip(self.running_mean, mean.data)
+            ]
+            self.running_var = [
+                (0.9 * running + 0.1 * current)
+                for running, current in zip(self.running_var, variance.data)
+            ]
+
+        normalized = (input - mean) / std
+        return self.gamma * normalized + self.beta
 
 
 class Loss(ABC):

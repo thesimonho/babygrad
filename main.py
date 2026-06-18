@@ -6,7 +6,7 @@ from math import ceil
 from babygrad.data import load_csv, prepare_supervised_data, create_minibatches
 from babygrad.tensor import Tensor
 from babygrad.metrics import accuracy
-from babygrad.nn import CCE, SGD, Linear, ReLU, Sequential, Softmax
+from babygrad.nn import CCE, SGD, Linear, ReLU, Sequential, Softmax, BatchNorm
 from babygrad.recorder import Recorder
 from babygrad.viz.plot import PlotVisualizer
 
@@ -22,6 +22,7 @@ def train_iris():
         [
             Linear(splits.x_train.ncol, 128),
             ReLU(),
+            BatchNorm(128),
             Linear(128, splits.y_train.ncol),
             Softmax(),
         ],
@@ -59,13 +60,16 @@ def train_iris():
             accum_loss.append(loss.data[0])
             accum_acc.append(acc)
 
-            progress_batch.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
-            progress_batch.update()
             loss.backward()
             optimizer.step()
 
+            progress_batch.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
+            progress_batch.update()
+
+        progress_batch.refresh()
+
         # validation
-        y_pred = model.forward(splits.x_val)
+        y_pred = model.eval(splits.x_val)
         validation_loss = criterion.forward(splits.y_val, y_pred)
 
         if loss is not None:
@@ -76,10 +80,10 @@ def train_iris():
 
     progress_batch.close()
 
-    y_pred = model.forward(splits.x_test)
+    y_pred = model.eval(splits.x_test)
     loss = criterion.forward(splits.y_test, y_pred)
     acc = accuracy(splits.y_test, y_pred)
-    print(f"test loss: {loss.data[0]:.4f}, test acc: {acc:.3f}")
+    print(f"\ntest loss: {loss.data[0]:.4f}, test acc: {acc:.3f}")
 
     # visualizer = GraphVisualizer(loss)
     # visualizer.draw_architecture(save_path="./architecture.svg")
@@ -90,8 +94,7 @@ def train_iris():
     visualizer.plot_scalar(["loss", "val_loss"])
     visualizer.plot_scalar(["acc"])
     visualizer.plot_ridge("Linear_0/weights")
-    visualizer.plot_ridge("Linear_0/weights/grad", clip_quantiles=(0.01, 0.99))
-    visualizer.plot_ridge("Linear_2/weights/grad", clip_quantiles=(0.01, 0.99))
+    visualizer.plot_ridge("Linear_3/weights/grad", clip_quantiles=(0.01, 0.99))
 
 
 if __name__ == "__main__":

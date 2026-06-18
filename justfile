@@ -1,5 +1,5 @@
 train:
-    python main.py
+    uv run python main.py
 
 lint:
     uv run ruff check babygrad tests
