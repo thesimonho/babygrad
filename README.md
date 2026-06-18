@@ -49,7 +49,7 @@ Everything else runs without it.
 
 [Notebook demo](./notebooks/phase1_tensor_foundations.ipynb)
 
-`*` = useful later, but not required before building forward-only layers.
+`*` = optional / nice-to-have — useful later, but not required to progress.
 
 <details>
 <summary><strong>Tensor data structure</strong> — storage, shape, indexing, and size metadata</summary>
@@ -166,6 +166,10 @@ Everything else runs without it.
 - [x] **Validation and test** - phases plus metrics
 - [x] **Batching** - full, mini-batch training
 - [x] **Zero grads between steps** — `.grad` is zeroed only at construction and deliveries use `+=`, so persistent tensors (weights) accumulate gradients across `backward()` calls unless reset each iteration
+- [ ] **Momentum**\* — optimizer state carried across steps
+- [ ] **L1 / L2 weight decay**\* — penalty-term regularization
+- [ ] **Gradient clipping**\* — stabilize large updates
+- [ ] **Early stopping**\* — halt on validation plateau
 
 ### Phase 5: Going Deeper
 
@@ -185,6 +189,7 @@ Everything else runs without it.
 - [ ] **Skip connections** — the residual block as a solution to vanishing gradients
 - [ ] **Stacking residual blocks** — building a small ResNet
   - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — He et al., 2015
+- [ ] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep; required by Phase 7)
 
 ### Phase 7: The Original Transformer
 
@@ -198,6 +203,9 @@ Everything else runs without it.
 - [ ] **Masking** — padding masks, causal (look-ahead) masks
   - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Vaswani et al., 2017
 - [ ] **Data pipeline** — lazy loader that tensorizes each batch on the fly (pad + mask variable-length sequences), replacing the up-front tensor batching
+- [ ] **Adam optimizer** — optimizer state, bias-corrected adaptive learning rates (the transformer's optimizer)
+- [ ] **Learning-rate warmup schedule** — the Vaswani warmup (+ cosine decay\*)
+- [ ] **Label smoothing**\* — soften one-hot targets
 
 ### Phase 8: Modern Transformer Modifications
 
