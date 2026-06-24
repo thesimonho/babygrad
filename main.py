@@ -1,29 +1,28 @@
-from pathlib import Path
-from tqdm import tqdm
-from statistics import mean
 from math import ceil
+from pathlib import Path
+from statistics import mean
 
-from babygrad.data import load_csv, prepare_supervised_data, create_minibatches
-from babygrad.tensor import Tensor
+from tqdm import tqdm
+
+from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import accuracy
-from babygrad.nn import CCE, SGD, Linear, ReLU, Sequential, Softmax, BatchNorm
+from babygrad.nn import CCE, SGD, BatchNorm, Linear, ReLU, Sequential, Softmax
 from babygrad.recorder import Recorder
+from babygrad.tensor import Tensor
 from babygrad.viz.plot import PlotVisualizer
 
 
 def train_iris():
-    dataset = load_csv(Path("./data/iris.csv"))
-    dataset.one_hot = True
-    dataset.target_col_idx = 4
-    splits = prepare_supervised_data(dataset)
+    dataset = CSVDataset(Path("./data/iris.csv"), 4, True)
+    train, val, test = split_train_val_test(dataset, one_hot=True)
 
     recorder = Recorder()
     model = Sequential(
         [
-            Linear(splits.x_train.ncol, 128),
+            Linear(train.n_features, 128),
             ReLU(),
             BatchNorm(128),
-            Linear(128, splits.y_train.ncol),
+            Linear(128, train.n_targets),
             Softmax(),
         ],
     )
@@ -33,7 +32,7 @@ def train_iris():
     optimizer = SGD(model.parameters(), 0.1)
     criterion = CCE()
 
-    n_batches = ceil(splits.x_train.nrow / batch_size)
+    n_batches = ceil(train.nrow / batch_size)
     progress_epoch = tqdm(range(epochs), desc="train (epochs)")
     progress_batch = tqdm(
         total=n_batches,
@@ -45,7 +44,7 @@ def train_iris():
     for e in progress_epoch:
         recorder.set_step(e)
 
-        minibatches = create_minibatches(splits.x_train, splits.y_train, batch_size)
+        minibatches = DataLoader(train, batch_size)
         progress_batch.reset()
 
         accum_loss = []
@@ -69,8 +68,10 @@ def train_iris():
         progress_batch.refresh()
 
         # validation
-        y_pred = model.eval(splits.x_val)
-        validation_loss = criterion.forward(splits.y_val, y_pred)
+        val_loader = DataLoader(val)
+        x, y = val_loader.full_batch()
+        y_pred = model.eval(x)
+        validation_loss = criterion.forward(y, y_pred)
 
         if loss is not None:
             recorder.capture(root=loss)
@@ -80,9 +81,11 @@ def train_iris():
 
     progress_batch.close()
 
-    y_pred = model.eval(splits.x_test)
-    loss = criterion.forward(splits.y_test, y_pred)
-    acc = accuracy(splits.y_test, y_pred)
+    test_loader = DataLoader(test)
+    x, y = test_loader.full_batch()
+    y_pred = model.eval(x)
+    loss = criterion.forward(y, y_pred)
+    acc = accuracy(y, y_pred)
     print(f"\ntest loss: {loss.data[0]:.4f}, test acc: {acc:.3f}")
 
     # visualizer = GraphVisualizer(loss)

@@ -10,9 +10,11 @@ Designed to be a lightweight learning project that's easy to mess around with.
 
 ## Rules
 
-- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here (a few minor exceptions for visualization, like matplotlib and graphviz)
+- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here.
 
 - **Every operation must be understood before it's implemented.** No copying reference code. No AI implementation.
+
+A couple of caveats/exceptions: I have no desire to write my own plotting library, so matplotlib and graphviz are used for viz. There are also notebooks associated with each phase - those are AI generated and exist simply as a demo of the API and what was completed during that phase.
 
 ## Development
 
@@ -184,14 +186,23 @@ Everything else runs without it.
 - [x] **Batch normalization**
   - [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167) — Ioffe & Szegedy, 2015
 
-### Phase 6: Residual Networks
+### Phase 6: Data Pipeline
+
+[Notebook demo](./notebooks/phase6_data_pipeline.ipynb)
+
+- [x] **Dataset abstraction** — `Dataset` ABC with a per-source `load()` / `__getitem__`; `CSVDataset` loads tabular data eagerly into `Sample(features, target)` rows
+- [x] **DataLoader** — shuffles a split and yields minibatches, with `full_batch()` for whole-split validation/test passes
+- [x] **Per-batch tensorization** — collate raw rows into `(features, target)` tensors on the fly, replacing the up-front whole-dataset batching
+- [x] **Fit-on-train preprocessing** — one-hot encoding fit on the training split and shared to val/test
+
+### Phase 7: Residual Networks
 
 - [ ] **Skip connections** — the residual block as a solution to vanishing gradients
 - [ ] **Stacking residual blocks** — building a small ResNet
   - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — He et al., 2015
-- [ ] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep; required by Phase 7)
+- [ ] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep; required by Phase 8)
 
-### Phase 7: The Original Transformer
+### Phase 8: The Original Transformer
 
 - [ ] **Scaled dot-product attention** — queries, keys, values
 - [ ] **Multi-head attention** — parallel attention heads, concatenation, projection
@@ -202,12 +213,12 @@ Everything else runs without it.
 - [ ] **Encoder and decoder blocks** — assembling the full architecture
 - [ ] **Masking** — padding masks, causal (look-ahead) masks
   - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Vaswani et al., 2017
-- [ ] **Data pipeline** — lazy loader that tensorizes each batch on the fly (pad + mask variable-length sequences), replacing the up-front tensor batching
+- [ ] **Data pipeline — sequence collation** — pad + mask variable-length sequences and lazily load tokens by offset, extending the eager tabular collate from Phase 6
 - [ ] **Adam optimizer** — optimizer state, bias-corrected adaptive learning rates (the transformer's optimizer)
 - [ ] **Learning-rate warmup schedule** — the Vaswani warmup (+ cosine decay\*)
 - [ ] **Label smoothing**\* — soften one-hot targets
 
-### Phase 8: Modern Transformer Modifications
+### Phase 9: Modern Transformer Modifications
 
 - [ ] **RMSNorm** — replacing LayerNorm, dropping the mean centering
   - [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467) — Zhang & Sennrich, 2019
@@ -216,7 +227,7 @@ Everything else runs without it.
 - [ ] **Rotary Position Embedding (RoPE)** — rotation-based positional encoding replacing sinusoidal
   - [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864) — Su et al., 2021
 
-### Phase 9: Efficient Attention
+### Phase 10: Efficient Attention
 
 - [ ] **Multi-Query Attention (MQA)** — single shared KV head across all query heads
   - [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150) — Shazeer, 2019
@@ -226,14 +237,14 @@ Everything else runs without it.
   - [Longformer: The Long-Document Transformer](https://arxiv.org/abs/2004.05150) — Beltagy et al., 2020
   - [Mistral 7B](https://arxiv.org/abs/2310.06825) — Jiang et al., 2023
 
-### Phase 10: Inference Optimizations
+### Phase 11: Inference Optimizations
 
 - [ ] **KV-cache** — caching key/value pairs for autoregressive generation
 - [ ] **Speculative decoding** — draft model + verification for parallel token generation
   - [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192) — Leviathan et al., 2022
   - [Accelerating Large Language Model Decoding with Speculative Sampling](https://arxiv.org/abs/2302.01318) — Chen et al., 2023
 
-### Phase 11: Mixture of Experts
+### Phase 12: Mixture of Experts
 
 - [ ] **Sparse gating** — routing tokens to a subset of expert FFNs
 - [ ] **MoE transformer block** — integrating sparse experts into the transformer
