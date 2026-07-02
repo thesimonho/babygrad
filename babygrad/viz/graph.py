@@ -133,7 +133,7 @@ class GraphVisualizer:
         if id(item) in visited:
             return
 
-        assert item.kind is not None
+        # assert item.kind is not None
 
         visited.add(id(item))
         graph.nodes[id(item)] = Node(
@@ -155,7 +155,7 @@ class GraphVisualizer:
         """
         Return a display string for the node.
         """
-        assert item.kind is not None
+        # assert item.kind is not None
 
         if isinstance(item, Op):
             return item.label
@@ -164,6 +164,8 @@ class GraphVisualizer:
             assert item.name is not None
             return item.name
 
+        if item.kind is None:
+            return "hello no kind"
         return item.kind.name.lower()
 
     def _new_digraph(self, name: str) -> graphviz.Digraph:

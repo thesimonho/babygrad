@@ -50,16 +50,17 @@ class He(WeightInitializer):
 
 
 class Sequential:
-    def __init__(self, layers: list[Layer]):
+    def __init__(self, layers: list[Layer], id):
         self.layers = layers
         self.is_training = True
+        self.id = id
 
         # stamp durable identities once: layers get an indexed name,
         # parameters get that name as their prefix ("Linear_0/weights")
         for i, layer in enumerate(layers):
-            layer.name = f"{layer.name}_{i}"
+            layer.name = f"{layer.name}_{id}_{i}"
             for parameter in layer.parameters():
-                parameter.name = f"{layer.name}/{parameter.name}"
+                parameter.name = f"{layer.name}_{id}/{parameter.name}"
                 parameter.scope = layer.name
 
     def parameters(self) -> list[Tensor]:
@@ -90,7 +91,7 @@ class Sequential:
             finally:
                 ops.clear_scope()
             # a named layer boundary: a more specific role than OP_RESULT
-            x.name = f"{layer.name}/result"
+            x.name = f"{layer.name}_{self.id}/result"
             x.kind = NodeKind.LAYER_OUTPUT
 
         return x
@@ -166,6 +167,16 @@ class Linear(Layer):
 
     def forward(self, input: Tensor) -> Tensor:
         return input @ self.weights + self.bias
+
+
+class Residual(Layer):
+    def __init__(self, block: Sequential):
+        super().__init__()
+        self.block = block
+
+    def forward(self, input: Tensor) -> Tensor:
+        output = self.block.forward(input)
+        return input + output
 
 
 class Sigmoid(Layer):

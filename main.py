@@ -6,10 +6,10 @@ from tqdm import tqdm
 
 from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import accuracy
-from babygrad.nn import CCE, SGD, BatchNorm, Linear, ReLU, Sequential, Softmax
+from babygrad.nn import CCE, SGD, BatchNorm, Linear, ReLU, Sequential, Residual, Softmax
 from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
-from babygrad.viz.plot import PlotVisualizer
+from babygrad.viz.graph import GraphVisualizer
 
 
 def train_iris():
@@ -21,10 +21,20 @@ def train_iris():
         [
             Linear(train.n_features, 128),
             ReLU(),
-            BatchNorm(128),
+            Residual(
+                Sequential(
+                    [
+                        Linear(128, 128),
+                        ReLU(),
+                        BatchNorm(128),
+                    ],
+                    1,
+                )
+            ),
             Linear(128, train.n_targets),
             Softmax(),
         ],
+        0,
     )
 
     epochs = 30
@@ -88,16 +98,16 @@ def train_iris():
     acc = accuracy(y, y_pred)
     print(f"\ntest loss: {loss.data[0]:.4f}, test acc: {acc:.3f}")
 
-    # visualizer = GraphVisualizer(loss)
-    # visualizer.draw_architecture(save_path="./architecture.svg")
-    # visualizer.draw_combined(save_path="./combined.svg")
-    # visualizer.draw_computation(save_path="./computation.svg")
+    visualizer = GraphVisualizer(loss)
+    visualizer.draw_architecture(save_path="./architecture.svg")
+    visualizer.draw_combined(save_path="./combined.svg")
+    visualizer.draw_computation(save_path="./computation.svg")
 
-    with PlotVisualizer(recorder.history) as visualizer:
-        visualizer.plot_scalar(["loss", "val_loss"])
-        visualizer.plot_scalar(["acc"])
-        visualizer.plot_ridge("Linear_0/weights")
-        visualizer.plot_ridge("Linear_3/weights/grad", clip_quantiles=(0.01, 0.99))
+    # with PlotVisualizer(recorder.history) as visualizer:
+    #     visualizer.plot_scalar(["loss", "val_loss"])
+    #     visualizer.plot_scalar(["acc"])
+    #     visualizer.plot_ridge("Linear_0/weights")
+    #     visualizer.plot_ridge("Linear_3/weights/grad", clip_quantiles=(0.01, 0.99))
 
 
 if __name__ == "__main__":
