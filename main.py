@@ -28,13 +28,11 @@ def train_iris():
                         ReLU(),
                         BatchNorm(128),
                     ],
-                    1,
                 )
             ),
             Linear(128, train.n_targets),
             Softmax(),
         ],
-        0,
     )
 
     epochs = 30

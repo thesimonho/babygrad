@@ -49,54 +49,6 @@ class He(WeightInitializer):
         return weights
 
 
-class Sequential:
-    def __init__(self, layers: list[Layer], id):
-        self.layers = layers
-        self.is_training = True
-        self.id = id
-
-        # stamp durable identities once: layers get an indexed name,
-        # parameters get that name as their prefix ("Linear_0/weights")
-        for i, layer in enumerate(layers):
-            layer.name = f"{layer.name}_{id}_{i}"
-            for parameter in layer.parameters():
-                parameter.name = f"{layer.name}_{id}/{parameter.name}"
-                parameter.scope = layer.name
-
-    def parameters(self) -> list[Tensor]:
-        parameter_layers = []
-        for layer in self.layers:
-            parameter_layers.extend(layer.parameters())
-
-        return parameter_layers
-
-    def eval(self, x: Tensor) -> Tensor:
-        """
-        Use for forward pass inference, not training.
-        """
-        self.is_training = False
-        output = self.forward(x)
-        self.is_training = True
-        return output
-
-    def forward(self, x: Tensor) -> Tensor:
-        # whatever is fed in is the graph's entrypoint
-        x.kind = NodeKind.INPUT
-
-        for layer in self.layers:
-            layer.is_training = self.is_training
-            ops.set_scope(layer.name)
-            try:
-                x = layer.forward(x)
-            finally:
-                ops.clear_scope()
-            # a named layer boundary: a more specific role than OP_RESULT
-            x.name = f"{layer.name}_{self.id}/result"
-            x.kind = NodeKind.LAYER_OUTPUT
-
-        return x
-
-
 class Optimizer(ABC):
     def __init__(self, parameters: list[Tensor], lr: float):
         self.parameters = parameters
@@ -120,7 +72,7 @@ class SGD(Optimizer):
                 p.data[i] -= p.grad[i] * self.lr
 
 
-class Layer(ABC):
+class Module(ABC):
     """
     Layer outputs compose via op Nodes, which give them backprop data
     and edge data for the graph
@@ -139,7 +91,57 @@ class Layer(ABC):
         pass
 
 
-class Linear(Layer):
+class Sequential(Module):
+    def __init__(self, layers: list[Module]):
+        super().__init__()
+        self.layers = layers
+
+        # stamp durable identities once: layers get an indexed name,
+        # parameters get that name as their prefix ("Linear_0/weights")
+        for i, layer in enumerate(layers):
+            layer.name = f"{layer.name}_{i}"
+            for parameter in layer.parameters():
+                parameter.name = f"{layer.name}/{parameter.name}"
+                parameter.scope = layer.name
+
+    def parameters(self) -> list[Tensor]:
+        """
+        Return a list of all parameters nested within this container.
+        """
+        parameter_layers = []
+        for layer in self.layers:
+            parameter_layers.extend(layer.parameters())
+
+        return parameter_layers
+
+    def eval(self, x: Tensor) -> Tensor:
+        """
+        Use for forward pass inference, not training.
+        """
+        self.is_training = False
+        output = self.forward(x)
+        self.is_training = True
+        return output
+
+    def forward(self, input: Tensor) -> Tensor:
+        # whatever is fed in is the graph's entrypoint
+        input.kind = NodeKind.INPUT
+
+        for layer in self.layers:
+            layer.is_training = self.is_training
+            ops.set_scope(layer.name)
+            try:
+                input = layer.forward(input)
+            finally:
+                ops.clear_scope()
+            # a named layer boundary: a more specific role than OP_RESULT
+            input.name = f"{layer.name}/result"
+            input.kind = NodeKind.LAYER_OUTPUT
+
+        return input
+
+
+class Linear(Module):
     def __init__(
         self,
         input_size,
@@ -147,7 +149,6 @@ class Linear(Layer):
         weight_init: type[WeightInitializer] | None = None,
     ):
         super().__init__()
-
         initializer = weight_init or Glorot
 
         self.weights = Tensor(
@@ -169,32 +170,38 @@ class Linear(Layer):
         return input @ self.weights + self.bias
 
 
-class Residual(Layer):
-    def __init__(self, block: Sequential):
+class Residual(Module):
+    def __init__(self, block: Module):
         super().__init__()
         self.block = block
+
+    def parameters(self) -> list[Tensor]:
+        """
+        Return a list of all parameters nested within this container.
+        """
+        return self.block.parameters()
 
     def forward(self, input: Tensor) -> Tensor:
         output = self.block.forward(input)
         return input + output
 
 
-class Sigmoid(Layer):
+class Sigmoid(Module):
     def forward(self, input: Tensor) -> Tensor:
         return ops.Sigmoid([input]).forward()
 
 
-class Tanh(Layer):
+class Tanh(Module):
     def forward(self, input: Tensor) -> Tensor:
         return ops.Tanh([input]).forward()
 
 
-class ReLU(Layer):
+class ReLU(Module):
     def forward(self, input: Tensor) -> Tensor:
         return ops.ReLU([input]).forward()
 
 
-class Softmax(Layer):
+class Softmax(Module):
     def forward(self, input: Tensor) -> Tensor:
         z = input - input.max(axis=1)
         exps = z.exp()
@@ -202,7 +209,7 @@ class Softmax(Layer):
         return row
 
 
-class BatchNorm(Layer):
+class BatchNorm(Module):
     """
     Normalize per-feature mean/variance across the batch to stop the parameters from changing every batch. Allows use of larger LR etc.
     """
