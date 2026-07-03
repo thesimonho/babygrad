@@ -83,7 +83,26 @@ class Module(ABC):
         self.name = type(self).__name__
         self.is_training = True
 
+    def children(self) -> list[Module]:
+        """
+        Return a list of any Modules nested within this container. Default [] for leaf nodes.
+        """
+        return []
+
     def parameters(self) -> list[Tensor]:
+        """
+        Return a list of all parameter tensors of nested children.
+        """
+        parameter_tensors = []
+        for c in self.children():
+            for p in c.parameters():
+                parameter_tensors.append(p)
+        return self.own_parameters() + parameter_tensors
+
+    def own_parameters(self) -> list[Tensor]:
+        """
+        Return a list of all parameter tensors owned by this module.
+        """
         return []
 
     @abstractmethod
@@ -104,15 +123,8 @@ class Sequential(Module):
                 parameter.name = f"{layer.name}/{parameter.name}"
                 parameter.scope = layer.name
 
-    def parameters(self) -> list[Tensor]:
-        """
-        Return a list of all parameters nested within this container.
-        """
-        parameter_layers = []
-        for layer in self.layers:
-            parameter_layers.extend(layer.parameters())
-
-        return parameter_layers
+    def children(self) -> list[Module]:
+        return self.layers
 
     def eval(self, x: Tensor) -> Tensor:
         """
@@ -163,7 +175,7 @@ class Linear(Module):
         self.bias.name = "bias"
         self.bias.kind = NodeKind.PARAMETER
 
-    def parameters(self):
+    def own_parameters(self):
         return [self.bias, self.weights]
 
     def forward(self, input: Tensor) -> Tensor:
@@ -175,11 +187,8 @@ class Residual(Module):
         super().__init__()
         self.block = block
 
-    def parameters(self) -> list[Tensor]:
-        """
-        Return a list of all parameters nested within this container.
-        """
-        return self.block.parameters()
+    def children(self) -> list[Module]:
+        return [self.block]
 
     def forward(self, input: Tensor) -> Tensor:
         output = self.block.forward(input)
@@ -235,7 +244,7 @@ class BatchNorm(Module):
         self.running_mean = [0.0] * n_features
         self.running_var = [1.0] * n_features
 
-    def parameters(self):
+    def own_parameters(self):
         return [self.beta, self.gamma]
 
     def forward(self, input: Tensor) -> Tensor:
