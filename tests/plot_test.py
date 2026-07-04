@@ -62,6 +62,7 @@ def test_bin_counts_clamps_outliers_into_edge_bins():
 def test_capture_records_named_tensors():
     recorder = Recorder()
     model = Sequential([Linear(2, 3), ReLU()])
+    model.stamp_name_and_scope()
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
     recorder.set_step(0)
@@ -81,6 +82,7 @@ def test_captured_weights_are_snapshots():
     recorder = Recorder()
     layer = Linear(2, 3)
     model = Sequential([layer])
+    model.stamp_name_and_scope()
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
     recorder.set_step(0)
@@ -109,6 +111,7 @@ def test_capture_records_grads():
     recorder = Recorder()
     layer = Linear(2, 3)
     model = Sequential([layer])
+    model.stamp_name_and_scope()
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
     output = model.forward(x)
@@ -127,6 +130,7 @@ def test_captured_grads_survive_zero_grad():
     recorder = Recorder()
     layer = Linear(2, 3)
     model = Sequential([layer])
+    model.stamp_name_and_scope()
     x = Tensor([1.0, 2.0], shape=(1, 2))
     output = model.forward(x)
     layer.weights.grad[0] = 7.0

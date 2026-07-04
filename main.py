@@ -34,6 +34,7 @@ def train_iris():
             Softmax(),
         ],
     )
+    model.stamp_name_and_scope()
 
     epochs = 30
     batch_size = 10

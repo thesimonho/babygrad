@@ -17,14 +17,9 @@ if TYPE_CHECKING:
 _active_scope: str | None = None
 
 
-def set_scope(name: str) -> None:
+def set_scope(name: str | None) -> None:
     global _active_scope
     _active_scope = name
-
-
-def clear_scope() -> None:
-    global _active_scope
-    _active_scope = None
 
 
 class Op(ABC):

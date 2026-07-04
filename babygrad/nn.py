@@ -109,19 +109,24 @@ class Module(ABC):
     def forward(self, input: Tensor) -> Tensor:
         pass
 
+    def stamp_name_and_scope(self, prefix: str = "", idx: int = 0):
+        """
+        Set the name and scope of all descendent Modules and their children
+        """
+        self.name = f"{prefix + '/' if prefix else ''}{self.name}_{idx}"
+
+        for idx, c in enumerate(self.children()):
+            c.stamp_name_and_scope(self.name, idx)
+
+        for idx, p in enumerate(self.own_parameters()):
+            p.scope = self.name
+            p.name = f"{self.name.split('/')[-1]}/{p.name}"
+
 
 class Sequential(Module):
     def __init__(self, layers: list[Module]):
         super().__init__()
         self.layers = layers
-
-        # stamp durable identities once: layers get an indexed name,
-        # parameters get that name as their prefix ("Linear_0/weights")
-        for i, layer in enumerate(layers):
-            layer.name = f"{layer.name}_{i}"
-            for parameter in layer.parameters():
-                parameter.name = f"{layer.name}/{parameter.name}"
-                parameter.scope = layer.name
 
     def children(self) -> list[Module]:
         return self.layers
@@ -137,7 +142,9 @@ class Sequential(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         # whatever is fed in is the graph's entrypoint
-        input.kind = NodeKind.INPUT
+        if input.producer is None:
+            input.kind = NodeKind.INPUT
+            input.scope = self.name
 
         for layer in self.layers:
             layer.is_training = self.is_training
@@ -145,9 +152,9 @@ class Sequential(Module):
             try:
                 input = layer.forward(input)
             finally:
-                ops.clear_scope()
+                ops.set_scope(self.name)
             # a named layer boundary: a more specific role than OP_RESULT
-            input.name = f"{layer.name}/result"
+            input.name = f"{layer.name.split('/')[-1]}/result"
             input.kind = NodeKind.LAYER_OUTPUT
 
         return input
@@ -294,7 +301,7 @@ class Loss(ABC):
         try:
             result = self.compute(y_true, y_pred)
         finally:
-            ops.clear_scope()
+            ops.set_scope(None)
         result.kind = NodeKind.LOSS
         return result
 
