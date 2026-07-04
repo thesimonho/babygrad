@@ -24,6 +24,7 @@ class NodeKind(Enum):
       - OP_RESULT:      Op.forward (the tensor an op produces)
       - LAYER_OUTPUT:   Sequential.forward (a named layer boundary)
       - LOSS:           the Loss base (the scalar the whole graph hinges on)
+      - CONSTANT:       Constant tensors (e.g. BatchNorm running stats)
 
     OP_RESULT is the default for any computed tensor; LAYER_OUTPUT and LOSS
     are more specific roles that override it (most-specific owner stamps last).
@@ -36,3 +37,4 @@ class NodeKind(Enum):
     OP_RESULT = auto()
     LAYER_OUTPUT = auto()
     LOSS = auto()
+    CONSTANT = auto()

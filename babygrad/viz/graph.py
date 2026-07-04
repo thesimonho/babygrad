@@ -64,6 +64,7 @@ _NODE_STYLE: dict[NodeKind, tuple[str, str, str]] = {
     NodeKind.OP_RESULT: ("box", "#edf2f4", "#495057"),
     NodeKind.LAYER_OUTPUT: ("box", "#457b9d", "white"),
     NodeKind.LOSS: ("box", "#1d3557", "white"),
+    NodeKind.CONSTANT: ("box", "#8a6bb5", "white"),
 }
 _DEFAULT_STYLE = ("box", "#edf2f4", "#495057")
 
@@ -133,7 +134,7 @@ class GraphVisualizer:
         if id(item) in visited:
             return
 
-        # assert item.kind is not None
+        assert item.kind is not None
 
         visited.add(id(item))
         graph.nodes[id(item)] = Node(
@@ -160,12 +161,12 @@ class GraphVisualizer:
         if isinstance(item, Op):
             return item.label
 
-        if item.kind == NodeKind.PARAMETER or item.kind == NodeKind.LAYER_OUTPUT:
+        if item.kind in (NodeKind.CONSTANT, NodeKind.PARAMETER, NodeKind.LAYER_OUTPUT):
             assert item.name is not None
             return item.name
 
         if item.kind is None:
-            return "hello no kind"
+            return ""
         return item.kind.name.lower()
 
     def _new_digraph(self, name: str) -> graphviz.Digraph:
