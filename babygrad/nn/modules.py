@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 
 from babygrad.nn.initializers import Glorot, WeightInitializer
+from babygrad.state import _is_training, _scope, bound
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
-from babygrad.state import bound, _is_training, _scope
 
 
 class Model:
@@ -184,12 +184,15 @@ class BatchNorm(Module):
 
         if not _is_training.get():
             mean.name = "running_mean"
+            mean.scope = _scope.get()
             mean.kind = NodeKind.CONSTANT
             variance.name = "running_variance"
+            variance.scope = _scope.get()
             variance.kind = NodeKind.CONSTANT
 
         epsilon = Tensor([self.epsilon], shape=(1,))
         epsilon.name = "epsilon"
+        epsilon.scope = _scope.get()
         epsilon.kind = NodeKind.CONSTANT
 
         std = (variance + epsilon).sqrt()

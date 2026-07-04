@@ -197,7 +197,7 @@ Everything else runs without it.
 
 ### Phase 7: Residual Networks
 
-- [ ] **Skip connections** — the residual block as a solution to vanishing gradients
+- [x] **Skip connections** — the residual block as a solution to vanishing gradients
 - [ ] **Stacking residual blocks** — building a small ResNet
   - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — He et al., 2015
 - [ ] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep; required by Phase 8)

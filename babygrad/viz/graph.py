@@ -4,7 +4,7 @@ Render an autograd graph: extract a neutral bipartite structure, then draw it.
 
 from __future__ import annotations
 
-from collections import defaultdict
+import zlib
 from dataclasses import dataclass, field
 
 import graphviz
@@ -35,6 +35,15 @@ class Graph:
     edges: set[Edge]
 
 
+@dataclass
+class _ScopeTree:
+    """One level of the scope hierarchy: the graph nodes stamped with this exact
+    scope, plus the child scopes nested one segment deeper."""
+
+    nodes: list[tuple[int, Node]] = field(default_factory=list)
+    children: dict[str, "_ScopeTree"] = field(default_factory=dict)
+
+
 _GRAPH_ATTR = {
     "rankdir": "TB",
     "bgcolor": "white",
@@ -56,6 +65,7 @@ _EDGE_ATTR = {
     "fontcolor": "#6c757d",
 }
 
+_DEFAULT_STYLE = ("box", "#edf2f4", "#495057")
 _NODE_STYLE: dict[NodeKind, tuple[str, str, str]] = {
     NodeKind.INPUT: ("box", "#e9c46a", "#3d3d3d"),
     NodeKind.TARGET: ("box", "#e9c46a", "#3d3d3d"),
@@ -66,7 +76,18 @@ _NODE_STYLE: dict[NodeKind, tuple[str, str, str]] = {
     NodeKind.LOSS: ("box", "#1d3557", "white"),
     NodeKind.CONSTANT: ("box", "#8a6bb5", "white"),
 }
-_DEFAULT_STYLE = ("box", "#edf2f4", "#495057")
+
+# (fill, border) pairs — Picked per cluster by a stable hash of its scope path, so a given scope keeps its colour across renders and sibling boxes read as distinct.
+_CLUSTER_PALETTE: list[tuple[str, str]] = [
+    ("#eef4fb", "#c3d9ee"),  # blue
+    ("#eef7f0", "#c6e4cd"),  # green
+    ("#fbf4e9", "#ecd9b8"),  # amber
+    ("#f5eefb", "#dcc6ee"),  # purple
+    ("#eafaf7", "#bfe6dd"),  # teal
+    ("#fbeef2", "#eec6d2"),  # rose
+    ("#f2f3f5", "#dadde1"),  # slate
+    ("#f6f8ea", "#dde6bb"),  # lime
+]
 
 
 def _format_shape(shape: Shape) -> str:
@@ -94,23 +115,13 @@ class GraphVisualizer:
         return self._render(dot, save_path)
 
     def draw_combined(self, save_path: str | None = None) -> graphviz.Digraph:
-        """The full graph with each layer scope wrapped in a cluster box."""
+        """The full graph with each layer scope wrapped in a cluster box, nested to mirror the module hierarchy."""
         dot = self._new_digraph("combined")
 
-        by_scope: dict[str | None, list[tuple[int, Node]]] = defaultdict(list)
-        for node_id, node in self.graph.nodes.items():
-            by_scope[node.scope].append((node_id, node))
-
-        for scope, members in by_scope.items():
-            if scope is None:
-                for node_id, node in members:
-                    self._add_node(dot, node_id, node)
-            else:
-                cluster = graphviz.Digraph(name=f"cluster_{scope}")
-                self._style_cluster(cluster, scope)
-                for node_id, node in members:
-                    self._add_node(cluster, node_id, node)
-                dot.subgraph(cluster)
+        ungrouped, tree = self._build_scope_tree()
+        for node_id, node in ungrouped:
+            self._add_node(dot, node_id, node)
+        self._add_scope_clusters(dot, tree, [])
 
         self._add_edges(dot, self.graph)
         return self._render(dot, save_path)
@@ -234,15 +245,48 @@ class GraphVisualizer:
 
         return Graph(nodes=nodes, edges=edges)
 
-    def _style_cluster(self, cluster: graphviz.Digraph, scope: str) -> None:
+    def _build_scope_tree(self) -> tuple[list[tuple[int, Node]], _ScopeTree]:
+        """Split each node's slash-delimited scope into a nested tree. Nodes with
+        no scope are returned separately to sit ungrouped at the top level."""
+        ungrouped: list[tuple[int, Node]] = []
+        root = _ScopeTree()
+        for node_id, node in self.graph.nodes.items():
+            if node.scope is None:
+                ungrouped.append((node_id, node))
+                continue
+            cursor = root
+            for segment in node.scope.split("/"):
+                cursor = cursor.children.setdefault(segment, _ScopeTree())
+            cursor.nodes.append((node_id, node))
+        return ungrouped, root
+
+    def _add_scope_clusters(
+        self, parent: graphviz.Digraph, tree: _ScopeTree, path: list[str]
+    ) -> None:
+        """Emit one nested cluster per scope segment. Each cluster holds the nodes
+        stamped with its exact scope and embeds its child scopes as sub-clusters."""
+        for segment, subtree in tree.children.items():
+            full_path = path + [segment]
+            cluster = graphviz.Digraph(name="cluster_" + "/".join(full_path))
+            self._style_cluster(cluster, segment, "/".join(full_path))
+            for node_id, node in subtree.nodes:
+                self._add_node(cluster, node_id, node)
+            self._add_scope_clusters(cluster, subtree, full_path)
+            parent.subgraph(cluster)
+
+    def _style_cluster(
+        self, cluster: graphviz.Digraph, label: str, path_key: str
+    ) -> None:
+        index = zlib.crc32(path_key.encode()) % len(_CLUSTER_PALETTE)
+        fill, border = _CLUSTER_PALETTE[index]
         cluster.attr(
-            label=scope,
+            label=label,
             labelloc="t",
             style="rounded,filled",
-            color="#dee2e6",
-            fillcolor="#f6f7f9",
+            color=border,
+            fillcolor=fill,
             fontname="Helvetica",
-            fontcolor="#6c757d",
+            fontcolor="#495057",
             fontsize="12",
             penwidth="1.4",
             margin="14",
