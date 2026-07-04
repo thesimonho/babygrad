@@ -1,75 +1,10 @@
-import math
 from abc import ABC, abstractmethod
-from random import Random
 
 from babygrad.tensor import Tensor
-from babygrad.types import NodeKind, Number, Shape
+from babygrad.types import NodeKind
 
-from . import ops
-
-
-class WeightInitializer(ABC):
-    def __init__(self, shape: Shape, seed: int = 42):
-        self.shape = shape
-        self.rng = Random(seed)
-
-    @abstractmethod
-    def generate(self) -> list[Number]:
-        pass
-
-
-class Uniform(WeightInitializer):
-    def generate(self):
-        weights = [self.rng.uniform(-0.1, 0.1) for _ in range(math.prod(self.shape))]
-        return weights
-
-
-class Glorot(WeightInitializer):
-    """
-    Keep variance independent of the number of inputs so the signal doesn't blow up with large layers.
-    """
-
-    def generate(self):
-        bounds = math.sqrt(6) / math.sqrt(sum(self.shape))
-        weights = [
-            self.rng.uniform(-bounds, bounds) for _ in range(math.prod(self.shape))
-        ]
-        return weights
-
-
-class He(WeightInitializer):
-    """
-    Used for ReLU layers. Negative half is zeroed out so we lose half the variance.
-    Compensate by double the variance of the initial weights.
-    """
-
-    def generate(self):
-        mu, sigma = (0, math.sqrt(2 / self.shape[0]))
-        weights = [self.rng.gauss(mu, sigma) for _ in range(math.prod(self.shape))]
-        return weights
-
-
-class Optimizer(ABC):
-    def __init__(self, parameters: list[Tensor], lr: float):
-        self.parameters = parameters
-        self.lr = lr
-
-    @abstractmethod
-    def step(self):
-        pass
-
-    def zero_grad(self):
-        for p in self.parameters:
-            for i in range(len(p.grad)):
-                p.grad[i] = 0.0
-
-
-class SGD(Optimizer):
-    def step(self):
-        for p in self.parameters:
-            assert len(p.grad) == len(p.data)
-            for i in range(len(p.grad)):
-                p.data[i] -= p.grad[i] * self.lr
+from babygrad import ops
+from babygrad.nn.initializers import Glorot, WeightInitializer
 
 
 class Module(ABC):
@@ -202,29 +137,6 @@ class Residual(Module):
         return input + output
 
 
-class Sigmoid(Module):
-    def forward(self, input: Tensor) -> Tensor:
-        return ops.Sigmoid([input]).forward()
-
-
-class Tanh(Module):
-    def forward(self, input: Tensor) -> Tensor:
-        return ops.Tanh([input]).forward()
-
-
-class ReLU(Module):
-    def forward(self, input: Tensor) -> Tensor:
-        return ops.ReLU([input]).forward()
-
-
-class Softmax(Module):
-    def forward(self, input: Tensor) -> Tensor:
-        z = input - input.max(axis=1)
-        exps = z.exp()
-        row = exps / exps.sum(axis=1)
-        return row
-
-
 class BatchNorm(Module):
     """
     Normalize per-feature mean/variance across the batch to stop the parameters from changing every batch. Allows use of larger LR etc.
@@ -284,41 +196,3 @@ class BatchNorm(Module):
 
         normalized = (input - mean) / std
         return self.gamma * normalized + self.beta
-
-
-class Loss(ABC):
-    """Base for loss functions.
-
-    forward() is the funnel: it stamps the supervision target and the loss
-    scalar, then delegates the math to the subclass. The loss result is an
-    op output, but LOSS is its more specific role, so it overrides OP_RESULT.
-    """
-
-    def forward(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
-        y_true.kind = NodeKind.TARGET
-        # scope the loss ops so they cluster into their own box, like a layer
-        ops.set_scope(type(self).__name__)
-        try:
-            result = self.compute(y_true, y_pred)
-        finally:
-            ops.set_scope(None)
-        result.kind = NodeKind.LOSS
-        return result
-
-    @abstractmethod
-    def compute(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
-        pass
-
-
-class CCE(Loss):
-    """Categorical cross-entropy for one hot targets."""
-
-    def compute(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
-        return -(y_true * y_pred.log()).sum(axis=1).mean()
-
-
-class MSE(Loss):
-    """Mean squared error for scalar targets."""
-
-    def compute(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
-        return ((y_true - y_pred) ** 2).mean()

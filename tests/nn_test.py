@@ -1,7 +1,8 @@
 from pytest import approx
 import math
 
-from babygrad.nn import CCE, MSE, Softmax
+from babygrad.nn.activations import Softmax
+from babygrad.nn.losses import CCE, MSE
 from babygrad.tensor import Tensor
 
 

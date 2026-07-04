@@ -3,7 +3,8 @@ import matplotlib
 matplotlib.use("Agg")
 
 from babygrad.types import History
-from babygrad.nn import Linear, ReLU, Sequential
+from babygrad.nn.activations import ReLU
+from babygrad.nn.modules import Linear, Sequential
 from babygrad.recorder import Recorder
 from babygrad.viz.plot import PlotVisualizer, _bin_counts
 from babygrad.tensor import Tensor

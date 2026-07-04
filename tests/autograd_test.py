@@ -2,7 +2,7 @@ import math
 
 from pytest import approx
 
-from babygrad.nn import ReLU, Softmax
+from babygrad.nn.activations import ReLU, Softmax
 from babygrad.tensor import Tensor
 
 

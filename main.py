@@ -6,7 +6,10 @@ from tqdm import tqdm
 
 from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import accuracy
-from babygrad.nn import CCE, SGD, BatchNorm, Linear, ReLU, Sequential, Residual, Softmax
+from babygrad.nn.activations import ReLU, Softmax
+from babygrad.nn.losses import CCE
+from babygrad.nn.modules import BatchNorm, Linear, Residual, Sequential
+from babygrad.nn.optimizers import SGD
 from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
 from babygrad.viz.graph import GraphVisualizer
