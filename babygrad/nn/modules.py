@@ -1,10 +1,39 @@
 from abc import ABC, abstractmethod
 
+from babygrad.nn.initializers import Glorot, WeightInitializer
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
+from babygrad.state import bound, _is_training, _scope
 
-from babygrad import ops
-from babygrad.nn.initializers import Glorot, WeightInitializer
+
+class Model:
+    def __init__(self, root: Module):
+        self.root = root
+        self.stamp_name_and_scope(self.root)
+
+    def eval(self, x: Tensor) -> Tensor:
+        """
+        Use for forward pass inference, not training.
+        """
+        with bound(_is_training, False):
+            return self.root.forward(x)
+
+    def forward(self, x: Tensor) -> Tensor:
+        with bound(_is_training, True):
+            return self.root.forward(x)
+
+    def stamp_name_and_scope(self, root: Module, prefix: str = "", idx: int = 0):
+        """
+        Set the name and scope of all descendent Modules and their children
+        """
+        root.name = f"{prefix + '/' if prefix else ''}{root.name}_{idx}"
+
+        for idx, c in enumerate(root.children()):
+            self.stamp_name_and_scope(c, root.name, idx)
+
+        for idx, p in enumerate(root.own_parameters()):
+            p.scope = root.name
+            p.name = f"{root.name.split('/')[-1]}/{p.name}"
 
 
 class Module(ABC):
@@ -16,7 +45,6 @@ class Module(ABC):
     def __init__(self):
         # bare type name by default; Sequential re-stamps it with an index
         self.name = type(self).__name__
-        self.is_training = True
 
     def children(self) -> list[Module]:
         """
@@ -44,19 +72,6 @@ class Module(ABC):
     def forward(self, input: Tensor) -> Tensor:
         pass
 
-    def stamp_name_and_scope(self, prefix: str = "", idx: int = 0):
-        """
-        Set the name and scope of all descendent Modules and their children
-        """
-        self.name = f"{prefix + '/' if prefix else ''}{self.name}_{idx}"
-
-        for idx, c in enumerate(self.children()):
-            c.stamp_name_and_scope(self.name, idx)
-
-        for idx, p in enumerate(self.own_parameters()):
-            p.scope = self.name
-            p.name = f"{self.name.split('/')[-1]}/{p.name}"
-
 
 class Sequential(Module):
     def __init__(self, layers: list[Module]):
@@ -66,15 +81,6 @@ class Sequential(Module):
     def children(self) -> list[Module]:
         return self.layers
 
-    def eval(self, x: Tensor) -> Tensor:
-        """
-        Use for forward pass inference, not training.
-        """
-        self.is_training = False
-        output = self.forward(x)
-        self.is_training = True
-        return output
-
     def forward(self, input: Tensor) -> Tensor:
         # whatever is fed in is the graph's entrypoint
         if input.producer is None:
@@ -82,12 +88,9 @@ class Sequential(Module):
             input.scope = self.name
 
         for layer in self.layers:
-            layer.is_training = self.is_training
-            ops.set_scope(layer.name)
-            try:
+            with bound(_scope, layer.name):
                 input = layer.forward(input)
-            finally:
-                ops.set_scope(self.name)
+
             # a named layer boundary: a more specific role than OP_RESULT
             input.name = f"{layer.name.split('/')[-1]}/result"
             input.kind = NodeKind.LAYER_OUTPUT
@@ -169,19 +172,21 @@ class BatchNorm(Module):
     def forward(self, input: Tensor) -> Tensor:
         mean = (
             input.mean(axis=0)
-            if self.is_training
+            if _is_training.get()
             else Tensor(self.running_mean, shape=((1, self.n_features)))
         )
+
         variance = (
             ((input - mean) ** 2).mean(axis=0)
-            if self.is_training
+            if _is_training.get()
             else Tensor(self.running_var, shape=((1, self.n_features)))
         )
 
         epsilon = Tensor([self.epsilon], shape=(1,))
+
         std = (variance + epsilon).sqrt()
 
-        if self.is_training:
+        if _is_training.get():
             # Moving average of running and current batch stats.
             # Use raw values: running stats must never become autograd nodes,
             # otherwise backward would propagate into them

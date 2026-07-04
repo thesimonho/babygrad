@@ -8,7 +8,7 @@ from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import accuracy
 from babygrad.nn.activations import ReLU, Softmax
 from babygrad.nn.losses import CCE
-from babygrad.nn.modules import BatchNorm, Linear, Residual, Sequential
+from babygrad.nn.modules import BatchNorm, Linear, Model, Residual, Sequential
 from babygrad.nn.optimizers import SGD
 from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
@@ -20,7 +20,7 @@ def train_iris():
     train, val, test = split_train_val_test(dataset, one_hot=True)
 
     recorder = Recorder()
-    model = Sequential(
+    root = Sequential(
         [
             Linear(train.n_features, 128),
             ReLU(),
@@ -37,11 +37,11 @@ def train_iris():
             Softmax(),
         ],
     )
-    model.stamp_name_and_scope()
+    model = Model(root)
 
     epochs = 30
     batch_size = 10
-    optimizer = SGD(model.parameters(), 0.1)
+    optimizer = SGD(model.root.parameters(), 0.1)
     criterion = CCE()
 
     n_batches = ceil(train.nrow / batch_size)

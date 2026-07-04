@@ -2,8 +2,7 @@ from abc import ABC, abstractmethod
 
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
-
-from babygrad import ops
+from babygrad.state import bound, _scope
 
 
 class Loss(ABC):
@@ -17,11 +16,9 @@ class Loss(ABC):
     def forward(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
         y_true.kind = NodeKind.TARGET
         # scope the loss ops so they cluster into their own box, like a layer
-        ops.set_scope(type(self).__name__)
-        try:
+        with bound(_scope, type(self).__name__):
             result = self.compute(y_true, y_pred)
-        finally:
-            ops.set_scope(None)
+
         result.kind = NodeKind.LOSS
         return result
 

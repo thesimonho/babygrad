@@ -4,22 +4,12 @@ import math
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, ClassVar, Optional
 
-from . import autograd, kernels, lib, types
-from .types import NodeKind
+from babygrad import autograd, kernels, lib, types
+from babygrad.state import _scope
+from babygrad.types import NodeKind
 
 if TYPE_CHECKING:
-    from .tensor import Tensor
-
-
-# The layer scope ops are created under, set by whoever drives the layers
-# (Sequential) before each layer runs and cleared after. Ops created outside
-# any layer (losses, ad-hoc tensor math) carry scope None.
-_active_scope: str | None = None
-
-
-def set_scope(name: str | None) -> None:
-    global _active_scope
-    _active_scope = name
+    from babygrad.tensor import Tensor
 
 
 class Op(ABC):
@@ -33,13 +23,13 @@ class Op(ABC):
 
     def __init__(self, inputs: list[Tensor]):
         self.inputs = inputs
-        self.scope = _active_scope
+        self.scope = _scope.get()
 
     def forward(self) -> Tensor:
         """
         Calculate the output value and create the resulting Tensor.
         """
-        from .tensor import Tensor
+        from babygrad.tensor import Tensor
 
         data, shape = self.compute()
         self.output = Tensor(data, shape)

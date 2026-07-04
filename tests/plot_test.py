@@ -4,7 +4,7 @@ matplotlib.use("Agg")
 
 from babygrad.types import History
 from babygrad.nn.activations import ReLU
-from babygrad.nn.modules import Linear, Sequential
+from babygrad.nn.modules import Linear, Model, Sequential
 from babygrad.recorder import Recorder
 from babygrad.viz.plot import PlotVisualizer, _bin_counts
 from babygrad.tensor import Tensor
@@ -62,8 +62,7 @@ def test_bin_counts_clamps_outliers_into_edge_bins():
 
 def test_capture_records_named_tensors():
     recorder = Recorder()
-    model = Sequential([Linear(2, 3), ReLU()])
-    model.stamp_name_and_scope()
+    model = Model(Sequential([Linear(2, 3), ReLU()]))
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
     recorder.set_step(0)
@@ -82,8 +81,7 @@ def test_capture_records_named_tensors():
 def test_captured_weights_are_snapshots():
     recorder = Recorder()
     layer = Linear(2, 3)
-    model = Sequential([layer])
-    model.stamp_name_and_scope()
+    model = Model(Sequential([layer]))
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
     recorder.set_step(0)
@@ -111,8 +109,7 @@ def test_no_capture_records_nothing():
 def test_capture_records_grads():
     recorder = Recorder()
     layer = Linear(2, 3)
-    model = Sequential([layer])
-    model.stamp_name_and_scope()
+    model = Model(Sequential([layer]))
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
     output = model.forward(x)
@@ -130,8 +127,7 @@ def test_capture_records_grads():
 def test_captured_grads_survive_zero_grad():
     recorder = Recorder()
     layer = Linear(2, 3)
-    model = Sequential([layer])
-    model.stamp_name_and_scope()
+    model = Model(Sequential([layer]))
     x = Tensor([1.0, 2.0], shape=(1, 2))
     output = model.forward(x)
     layer.weights.grad[0] = 7.0
