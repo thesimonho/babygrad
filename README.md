@@ -197,26 +197,37 @@ Everything else runs without it.
 
 ### Phase 7: Residual Networks
 
+[Notebook demo](./notebooks/phase7_residual_networks.ipynb)
+
 - [x] **Skip connections** — the residual block as a solution to vanishing gradients
-- [ ] **Stacking residual blocks** — building a small ResNet
+- [x] **Stacking residual blocks** — building a small ResNet
   - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — He et al., 2015
-- [ ] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep; required by Phase 8)
 
 ### Phase 8: The Original Transformer
+
+**Building blocks** — general techniques the transformer relies on:
+
+- [ ] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep)
+- [ ] **Layer normalization**
+  - [Layer Normalization](https://arxiv.org/abs/1607.06450) — Ba et al., 2016
+- [ ] **Adam optimizer** — optimizer state, bias-corrected adaptive learning rates (the transformer's optimizer)
+  - [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Kingma & Ba, 2014
+- [ ] **Learning-rate warmup schedule** — the Vaswani warmup (+ cosine decay\*)
+  - cosine decay: [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Loshchilov & Hutter, 2016
+- [ ] **Label smoothing**\* — soften one-hot targets
+  - [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) — Szegedy et al., 2016
+- [ ] **Data pipeline — sequence collation** — pad + mask variable-length sequences and lazily load tokens by offset, extending the eager tabular collate
+
+---
+
+**The transformer** — [Attention Is All You Need](https://arxiv.org/abs/1706.03762) (Vaswani et al., 2017):
 
 - [ ] **Scaled dot-product attention** — queries, keys, values
 - [ ] **Multi-head attention** — parallel attention heads, concatenation, projection
 - [ ] **Sinusoidal positional encoding** — injecting sequence order
 - [ ] **Position-wise feed-forward network** — the other half of a transformer block
-- [ ] **Layer normalization**
-  - [Layer Normalization](https://arxiv.org/abs/1607.06450) — Ba et al., 2016
 - [ ] **Encoder and decoder blocks** — assembling the full architecture
 - [ ] **Masking** — padding masks, causal (look-ahead) masks
-  - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Vaswani et al., 2017
-- [ ] **Data pipeline — sequence collation** — pad + mask variable-length sequences and lazily load tokens by offset, extending the eager tabular collate from Phase 6
-- [ ] **Adam optimizer** — optimizer state, bias-corrected adaptive learning rates (the transformer's optimizer)
-- [ ] **Learning-rate warmup schedule** — the Vaswani warmup (+ cosine decay\*)
-- [ ] **Label smoothing**\* — soften one-hot targets
 
 ### Phase 9: Modern Transformer Modifications
 
