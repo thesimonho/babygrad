@@ -11,7 +11,15 @@ from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import accuracy
 from babygrad.nn.activations import ReLU, Softmax
 from babygrad.nn.losses import CCE
-from babygrad.nn.modules import BatchNorm, Linear, Model, Module, Residual, Sequential
+from babygrad.nn.modules import (
+    BatchNorm,
+    Dropout,
+    Linear,
+    Model,
+    Module,
+    Residual,
+    Sequential,
+)
 from babygrad.nn.optimizers import SGD
 from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
@@ -29,11 +37,7 @@ def train_iris():
             ReLU(),
             Residual(
                 Sequential(
-                    [
-                        Linear(128, 128),
-                        ReLU(),
-                        BatchNorm(128),
-                    ],
+                    [Linear(128, 128), BatchNorm(128), ReLU(), Dropout(0.8)],
                 )
             ),
             Linear(128, train.n_targets),

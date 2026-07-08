@@ -1,3 +1,4 @@
+import random
 from abc import ABC, abstractmethod
 
 from babygrad.nn.initializers import Glorot, WeightInitializer
@@ -107,7 +108,6 @@ class Linear(Module):
     ):
         super().__init__()
         initializer = weight_init or Glorot
-
         self.weights = Tensor(
             initializer((input_size, output_size)).generate(),
             shape=(input_size, output_size),
@@ -125,6 +125,27 @@ class Linear(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         return input @ self.weights + self.bias
+
+
+class Dropout(Module):
+    def __init__(self, p: float = 0.5):
+        assert p < 1.0 and p >= 0.0
+        super().__init__()
+        self.p = p
+
+    def forward(self, input: Tensor) -> Tensor:
+        if _is_training.get() and self.p > 0:
+            keep_values = []
+            for _ in range(input.numel):
+                keep = 1 if random.random() > self.p else 0
+                keep_values.append(keep)
+
+            # no need to store this as gradient will already be multipled by the mask values via autograd
+            dropout_mask = Tensor(data=keep_values, shape=input.shape)
+            output = (input / (1 - self.p)) * dropout_mask
+            return output
+
+        return input
 
 
 class Residual(Module):

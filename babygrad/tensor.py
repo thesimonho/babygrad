@@ -5,7 +5,7 @@ from collections import defaultdict
 from typing import overload
 
 from . import autograd, formatting, ops, types
-from .types import NodeKind
+from .types import NodeKind, Number
 
 
 class Tensor:
@@ -177,11 +177,29 @@ class Tensor:
     def __pow__(self, exponent: types.Number) -> Tensor:
         return ops.Pow([self], exponent).forward()
 
-    def __truediv__(self, t: Tensor) -> Tensor:
+    @overload
+    def __truediv__(self, t: Number) -> Tensor: ...
+    @overload
+    def __truediv__(self, t: Tensor) -> Tensor: ...
+    def __truediv__(self, t) -> Tensor:
+        if isinstance(t, int | float):
+            t = Tensor([t], shape=(1,))
         return ops.Div([self, t]).forward()
+
+    @overload
+    def __rtruediv__(self, t: Number) -> Tensor: ...
+    @overload
+    def __rtruediv__(self, t: Tensor) -> Tensor: ...
+    def __rtruediv__(self, t) -> Tensor:
+        if isinstance(t, int | float):
+            t = Tensor([t], shape=(1,))
+        return ops.Div([t, self]).forward()
 
     def __mul__(self, t: Tensor) -> Tensor:
         return ops.Mul([self, t]).forward()
+
+    def __rmul__(self, t: Tensor) -> Tensor:
+        return ops.Mul([t, self]).forward()
 
     def __matmul__(self, t: Tensor) -> Tensor:
         return ops.MatMul([self, t]).forward()
