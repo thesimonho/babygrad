@@ -191,22 +191,19 @@ def _index_to_coordinate(shape: types.Shape, index: int) -> tuple[int, ...]:
     """
     Convert a list index to a tensor coordinate given a specific shape.
     Example: list[0] -> coordinate(0,0)
+
+    The insight for the divmod: if you have an index somewhere along a flatlist, you want to know how many rows can fit before that index (div). the remainder of that (mod) carries to the next shape dimension as the new index, then how many columns fit into that leftover index.
     """
+
     if math.prod(shape) <= index or index < 0:
         raise IndexError(f"Target index out of bounds for shape {shape}")
 
-    total = 0
     coordinates = []
-    for i, dim in enumerate(shape):
-        dim_idx = 0
-        # this loop is just checking how many times the chunk can fit in before the index. div+remainder will achieve the same thing as this inner loop
-        for idx in range(1, dim + 1):
-            stride = math.prod(shape[i + 1 :])
-            if total + stride > index:
-                break
-            total += stride
-            dim_idx = idx
-        coordinates.append(dim_idx)
+    for i in range(len(shape)):
+        stride = math.prod(shape[i + 1 :])
+        c, r = divmod(index, stride)
+        index = r
+        coordinates.append(c)
 
     return tuple(coordinates)
 

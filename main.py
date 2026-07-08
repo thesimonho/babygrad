@@ -1,6 +1,9 @@
+import sys
 from math import ceil
 from pathlib import Path
+from random import seed
 from statistics import mean
+from time import perf_counter
 
 from tqdm import tqdm
 
@@ -8,7 +11,7 @@ from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import accuracy
 from babygrad.nn.activations import ReLU, Softmax
 from babygrad.nn.losses import CCE
-from babygrad.nn.modules import BatchNorm, Linear, Model, Residual, Sequential
+from babygrad.nn.modules import BatchNorm, Linear, Model, Module, Residual, Sequential
 from babygrad.nn.optimizers import SGD
 from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
@@ -112,5 +115,81 @@ def train_iris():
     #     visualizer.plot_ridge("Linear_3/weights/grad", clip_quantiles=(0.01, 0.99))
 
 
+def train_resnet():
+    seed(0)  # deterministic split, shuffling, and weight init
+
+    dataset = CSVDataset(Path("./data/concentric_circles.csv"), target_col_idx=2)
+    dataset.data = dataset.data[:1250]  # same 1250-row slice as the notebook
+    train, val, test = split_train_val_test(dataset, one_hot=True)
+
+    width = 16  # hidden width
+    blocks = 18  # 18 blocks * 2 Linears = 36 hidden layers
+
+    def block_body():
+        return [
+            BatchNorm(width),
+            ReLU(),
+            Linear(width, width),
+            BatchNorm(width),
+            ReLU(),
+            Linear(width, width),
+        ]
+
+    layers: list[Module] = [Linear(train.n_features, width)]
+    for _ in range(blocks):
+        layers.append(Residual(Sequential(block_body())))
+    layers += [Linear(width, train.n_targets), Softmax()]
+    root = Sequential(layers)
+
+    model = Model(root)
+
+    epochs = 5
+    batch_size = 64
+    optimizer = SGD(root.parameters(), lr=0.1)
+    criterion = CCE()
+    val_x, val_y = DataLoader(val).full_batch()
+
+    n_batches = ceil(train.nrow / batch_size)
+    for e in range(epochs):
+        epoch_start = perf_counter()
+
+        batch_losses = []
+        batches = tqdm(
+            DataLoader(train, batch_size),
+            total=n_batches,
+            desc=f"epoch {e + 1}/{epochs}",
+            leave=False,
+        )
+        for x, y in batches:
+            optimizer.zero_grad()
+            loss = criterion.forward(y, model.forward(x))
+            loss.backward()
+            optimizer.step()
+            batch_losses.append(loss.data[0])
+
+        val_pred = model.eval(val_x)
+        val_loss = criterion.forward(val_y, val_pred)
+        val_acc = accuracy(val_y, val_pred)
+
+        epoch_time = perf_counter() - epoch_start
+        print(
+            f"epoch {e + 1}/{epochs}  "
+            f"train_loss {mean(batch_losses):.4f}  "
+            f"val_loss {val_loss.data[0]:.4f}  "
+            f"val_acc {val_acc:.3f}  "
+            f"({epoch_time:.2f}s)"
+        )
+
+    test_x, test_y = DataLoader(test).full_batch()
+    test_pred = model.eval(test_x)
+    print(
+        f"\ntest loss: {criterion.forward(test_y, test_pred).data[0]:.4f}, "
+        f"test acc: {accuracy(test_y, test_pred):.3f}"
+    )
+
+
 if __name__ == "__main__":
-    train_iris()
+    if len(sys.argv) > 1 and sys.argv[1] == "resnet":
+        train_resnet()
+    else:
+        train_iris()

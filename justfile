@@ -1,5 +1,5 @@
-train:
-    uv run python main.py
+train model="":
+    uv run python main.py {{ model }}
 
 lint:
     uv run ruff check babygrad tests
