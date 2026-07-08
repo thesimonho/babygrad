@@ -164,6 +164,8 @@ class Residual(Module):
 class BatchNorm(Module):
     """
     Normalize per-feature mean/variance across the batch to stop the parameters from changing every batch. Allows use of larger LR etc.
+
+    Still used for image inputs.
     """
 
     def __init__(
@@ -233,3 +235,43 @@ class BatchNorm(Module):
 
         normalized = (input - mean) / std
         return self.gamma * normalized + self.beta
+
+
+class LayerNorm(Module):
+    """
+    Normalize per-row mean/variance, with additional gain and bias parameters.
+
+    Unlike BatchNorm, this normalizes across all the features of a single sample so:
+    1) can be used with online training
+    2) does not require a training-time mean and variance
+    """
+
+    def __init__(self, n_features: int):
+        super().__init__()
+        self.n_features = n_features
+
+        self.gain = Tensor([1.0] * n_features, shape=(1, n_features))
+        self.gain.name = "gain"
+        self.gain.kind = NodeKind.PARAMETER
+
+        self.bias = Tensor([0.0] * n_features, shape=(1, n_features))
+        self.bias.name = "bias"
+        self.bias.kind = NodeKind.PARAMETER
+
+    def own_parameters(self):
+        return [self.bias, self.gain]
+
+    def forward(self, input: Tensor) -> Tensor:
+        mean = input.mean(axis=1)
+        mean.scope = _scope.get()
+        mean.kind = NodeKind.OP_RESULT
+
+        variance = ((input - mean) ** 2).mean(axis=1)
+        variance.kind = NodeKind.OP_RESULT
+        variance.scope = _scope.get()
+
+        # NOTE: original paper doesnt include epsilon
+        std = variance.sqrt()
+        centered = input - mean
+
+        return (self.gain / std) * centered + self.bias
