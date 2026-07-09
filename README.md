@@ -210,7 +210,7 @@ Everything else runs without it.
 - [x] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep)
 - [x] **Layer normalization**
   - [Layer Normalization](https://arxiv.org/abs/1607.06450) — Ba et al., 2016
-- [ ] **Adam optimizer** — optimizer state, bias-corrected adaptive learning rates (the transformer's optimizer)
+- [x] **Adam optimizer** — optimizer state, bias-corrected adaptive learning rates (the transformer's optimizer)
   - [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Kingma & Ba, 2014
 - [ ] **Learning-rate warmup schedule** — the Vaswani warmup (+ cosine decay\*)
   - cosine decay: [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Loshchilov & Hutter, 2016

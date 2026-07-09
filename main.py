@@ -20,7 +20,7 @@ from babygrad.nn.modules import (
     Residual,
     Sequential,
 )
-from babygrad.nn.optimizers import SGD
+from babygrad.nn.optimizers import SGD, Adam
 from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
 from babygrad.viz.graph import GraphVisualizer
@@ -48,7 +48,7 @@ def train_iris():
 
     epochs = 30
     batch_size = 10
-    optimizer = SGD(model.root.parameters(), 0.1)
+    optimizer = Adam(model.root.parameters(), 0.1)
     criterion = CCE()
 
     n_batches = ceil(train.nrow / batch_size)

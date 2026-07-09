@@ -106,6 +106,9 @@ class Linear(Module):
         output_size,
         weight_init: type[WeightInitializer] | None = None,
     ):
+        """
+        Maps input_size features to output_size nodes; output_size is the layer width.
+        """
         super().__init__()
         initializer = weight_init or Glorot
         self.weights = Tensor(
