@@ -21,6 +21,7 @@ from babygrad.nn.modules import (
     Sequential,
 )
 from babygrad.nn.optimizers import SGD, Adam
+from babygrad.nn.schedulers import ConstantLR, CosineAnnealingLR
 from babygrad.recorder import Recorder
 from babygrad.tensor import Tensor
 from babygrad.viz.graph import GraphVisualizer
@@ -48,7 +49,8 @@ def train_iris():
 
     epochs = 30
     batch_size = 10
-    optimizer = Adam(model.root.parameters(), 0.1)
+    optimizer = SGD(root.parameters())
+    scheduler = ConstantLR(0.1)
     criterion = CCE()
 
     n_batches = ceil(train.nrow / batch_size)
@@ -61,7 +63,8 @@ def train_iris():
     )
 
     for e in progress_epoch:
-        recorder.set_step(e)
+        optimizer.lr = scheduler(e)
+        recorder.step = e
 
         minibatches = DataLoader(train, batch_size)
         progress_batch.reset()
@@ -147,15 +150,17 @@ def train_resnet():
 
     model = Model(root)
 
-    epochs = 5
+    epochs = 40
     batch_size = 64
-    optimizer = SGD(root.parameters(), lr=0.1)
+    optimizer = Adam(model.root.parameters())
+    scheduler = CosineAnnealingLR(T_0=1, T_mult=2)
     criterion = CCE()
     val_x, val_y = DataLoader(val).full_batch()
 
     n_batches = ceil(train.nrow / batch_size)
     for e in range(epochs):
         epoch_start = perf_counter()
+        optimizer.lr = scheduler(e)
 
         batch_losses = []
         batches = tqdm(

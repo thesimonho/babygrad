@@ -19,9 +19,6 @@ class Recorder:
         self.step: Step = 0
         self.history: History = defaultdict(dict)
 
-    def set_step(self, step: Step):
-        self.step = step
-
     def record(self, tag: Tag, value: HistoryValue):
         self.history[tag][self.step] = value
 

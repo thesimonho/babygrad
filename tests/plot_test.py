@@ -65,7 +65,7 @@ def test_capture_records_named_tensors():
     model = Model(Sequential([Linear(2, 3), ReLU()]))
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
-    recorder.set_step(0)
+    recorder.step = 0
     output = model.forward(x)
     recorder.capture(output)
 
@@ -84,10 +84,10 @@ def test_captured_weights_are_snapshots():
     model = Model(Sequential([layer]))
     x = Tensor([1.0, 2.0], shape=(1, 2))
 
-    recorder.set_step(0)
+    recorder.step = 0
     recorder.capture(model.forward(x))
     layer.weights.data[0] += 100.0
-    recorder.set_step(1)
+    recorder.step = 1
     recorder.capture(model.forward(x))
 
     recorded = recorder.history["Linear_0/weights"]
@@ -115,7 +115,7 @@ def test_capture_records_grads():
     output = model.forward(x)
     output.sum().backward()
 
-    recorder.set_step(0)
+    recorder.step = 0
     recorder.capture(output)
 
     assert "Linear_0/weights/grad" in recorder.history
@@ -132,7 +132,7 @@ def test_captured_grads_survive_zero_grad():
     output = model.forward(x)
     layer.weights.grad[0] = 7.0
 
-    recorder.set_step(0)
+    recorder.step = 0
     recorder.capture(output)
     layer.weights.grad[0] = 0.0  # what zero_grad() does, in place
 

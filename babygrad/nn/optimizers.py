@@ -5,13 +5,25 @@ from babygrad.tensor import Tensor
 
 
 class Optimizer(ABC):
-    def __init__(self, parameters: list[Tensor], lr: float):
+    def __init__(self, parameters: list[Tensor]):
         self.parameters = parameters
-        self.lr = lr
+        self._lr: float | None = None
 
     @abstractmethod
     def step(self):
         pass
+
+    @property
+    def lr(self):
+        if self._lr is None:
+            raise ValueError(
+                "Learning rate unset. Get the value from a Scheduler or set .lr manually."
+            )
+        return self._lr
+
+    @lr.setter
+    def lr(self, value: float):
+        self._lr = value
 
     def zero_grad(self):
         for p in self.parameters:
@@ -41,7 +53,6 @@ class Adam(Optimizer):
     def __init__(
         self,
         parameters: list[Tensor],
-        lr: float = 1e-3,
         beta1: float = 9e-1,
         beta2: float = 9.99e-1,
         epsilon: float = 1e-8,
@@ -49,7 +60,7 @@ class Adam(Optimizer):
         """
         parameters is the filtered list of learnable parameters (weights, bias, etc)
         """
-        super().__init__(parameters, lr)
+        super().__init__(parameters)
         self.beta1 = beta1
         self.beta2 = beta2
         self.epsilon = epsilon
