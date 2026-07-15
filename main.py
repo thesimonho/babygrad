@@ -111,9 +111,9 @@ def train_iris():
     print(f"\ntest loss: {loss.data[0]:.4f}, test acc: {acc:.3f}")
 
     visualizer = GraphVisualizer(loss)
-    visualizer.draw_architecture(save_path="./architecture.svg")
-    visualizer.draw_combined(save_path="./combined.svg")
-    visualizer.draw_computation(save_path="./computation.svg")
+    visualizer.draw_architecture(save_path="./plots/architecture.svg")
+    visualizer.draw_computation(save_path="./plots/computation.svg")
+    visualizer.draw_combined(save_path="./plots/combined.svg")
 
     # with PlotVisualizer(recorder.history) as visualizer:
     #     visualizer.plot_scalar(["loss", "val_loss"])
