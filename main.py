@@ -23,6 +23,7 @@ from babygrad.nn.modules import (
 from babygrad.nn.optimizers import SGD, Adam
 from babygrad.nn.schedulers import ConstantLR, CosineAnnealingLR
 from babygrad.recorder import Recorder
+from babygrad.state import _is_training, bound
 from babygrad.tensor import Tensor
 from babygrad.viz.graph import GraphVisualizer
 
@@ -51,7 +52,7 @@ def train_iris():
     batch_size = 10
     optimizer = SGD(root.parameters())
     scheduler = ConstantLR(0.1)
-    criterion = CCE()
+    criterion = CCE(0.1)
 
     n_batches = ceil(train.nrow / batch_size)
     progress_epoch = tqdm(range(epochs), desc="train (epochs)")
@@ -71,20 +72,23 @@ def train_iris():
 
         accum_loss = []
         accum_acc = []
-        loss: Tensor | None = None
+        train_loss: Tensor | None = None
         for x, y in minibatches:
             optimizer.zero_grad()
 
             y_pred = model.forward(x)
-            loss = criterion.forward(y, y_pred)
+            with bound(_is_training, True):
+                train_loss = criterion.forward(y, y_pred)
             acc = accuracy(y, y_pred)
-            accum_loss.append(loss.data[0])
+            accum_loss.append(train_loss.data[0])
             accum_acc.append(acc)
 
-            loss.backward()
+            train_loss.backward()
             optimizer.step()
 
-            progress_batch.set_postfix(loss=f"{loss.data[0]:.4f}", acc=f"{acc:.3f}")
+            progress_batch.set_postfix(
+                loss=f"{train_loss.data[0]:.4f}", acc=f"{acc:.3f}"
+            )
             progress_batch.update()
 
         progress_batch.refresh()
@@ -93,10 +97,11 @@ def train_iris():
         val_loader = DataLoader(val)
         x, y = val_loader.full_batch()
         y_pred = model.eval(x)
-        validation_loss = criterion.forward(y, y_pred)
+        with bound(_is_training, False):
+            validation_loss = criterion.forward(y, y_pred)
 
-        if loss is not None:
-            recorder.capture(root=loss)
+        if train_loss is not None:
+            recorder.capture(root=train_loss)
         recorder.record("loss", mean(accum_loss))
         recorder.record("acc", mean(accum_acc))
         recorder.record("val_loss", validation_loss.data[0])
@@ -106,11 +111,13 @@ def train_iris():
     test_loader = DataLoader(test)
     x, y = test_loader.full_batch()
     y_pred = model.eval(x)
-    loss = criterion.forward(y, y_pred)
-    acc = accuracy(y, y_pred)
-    print(f"\ntest loss: {loss.data[0]:.4f}, test acc: {acc:.3f}")
+    with bound(_is_training, False):
+        test_loss = criterion.forward(y, y_pred)
 
-    visualizer = GraphVisualizer(loss)
+    acc = accuracy(y, y_pred)
+    print(f"\ntest loss: {test_loss.data[0]:.4f}, test acc: {acc:.3f}")
+
+    visualizer = GraphVisualizer(train_loss)
     visualizer.draw_architecture(save_path="./plots/architecture.svg")
     visualizer.draw_computation(save_path="./plots/computation.svg")
     visualizer.draw_combined(save_path="./plots/combined.svg")
@@ -177,8 +184,10 @@ def train_resnet():
             batch_losses.append(loss.data[0])
 
         val_pred = model.eval(val_x)
-        val_loss = criterion.forward(val_y, val_pred)
         val_acc = accuracy(val_y, val_pred)
+
+        with bound(_is_training, False):
+            val_loss = criterion.forward(val_y, val_pred)
 
         epoch_time = perf_counter() - epoch_start
         print(

@@ -214,7 +214,7 @@ Everything else runs without it.
   - [Adam: A Method for Stochastic Optimization](https://arxiv.org/abs/1412.6980) — Kingma & Ba, 2014
 - [x] **Learning-rate warmup schedule** — the Vaswani warmup (+ cosine decay\*)
   - cosine decay: [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Loshchilov & Hutter, 2016
-- [ ] **Label smoothing**\* — soften one-hot targets
+- [x] **Label smoothing**\* — soften one-hot targets
   - [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) — Szegedy et al., 2016
 - [ ] **Data pipeline — sequence collation** — pad + mask variable-length sequences and lazily load tokens by offset, extending the eager tabular collate
 
