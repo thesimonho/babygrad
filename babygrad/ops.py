@@ -32,12 +32,8 @@ class Op(ABC):
         from babygrad.tensor import Tensor
 
         data, shape = self.compute()
-        self.output = Tensor(data, shape)
+        self.output = Tensor(data, shape, kind=NodeKind.OP_RESULT, scope=self.scope)
         self.output.producer = self
-        # default role for any computed tensor; Sequential/Loss may override
-        self.output.kind = NodeKind.OP_RESULT
-        # the op's layer scope flows to the tensor it produces
-        self.output.scope = self.scope
         return self.output
 
     @abstractmethod

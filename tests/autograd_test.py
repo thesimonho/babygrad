@@ -4,6 +4,7 @@ from pytest import approx
 
 from babygrad.nn.activations import ReLU, Softmax
 from babygrad.tensor import Tensor
+from babygrad.types import NodeKind
 
 
 def propagate_output_grad(output: Tensor, grad: list[float]) -> None:
@@ -13,8 +14,8 @@ def propagate_output_grad(output: Tensor, grad: list[float]) -> None:
 
 
 def test_add_tracks_parents():
-    left = Tensor([2, 2], shape=(2, 1))
-    right = Tensor([5, 1], shape=(2, 1))
+    left = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW)
+    right = Tensor([5, 1], shape=(2, 1), kind=NodeKind.VIEW)
 
     output = left + right
 
@@ -25,8 +26,8 @@ def test_add_tracks_parents():
 
 
 def test_add_gradients():
-    left = Tensor([2, 2], shape=(2, 1))
-    right = Tensor([5, 1], shape=(2, 1))
+    left = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW)
+    right = Tensor([5, 1], shape=(2, 1), kind=NodeKind.VIEW)
     output = left + right
 
     propagate_output_grad(output, [1.0, 1.0])
@@ -36,8 +37,8 @@ def test_add_gradients():
 
 
 def test_add_unbroadcasts_gradients():
-    left = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3))
-    right = Tensor([10, 20, 30], shape=(1, 3))
+    left = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([10, 20, 30], shape=(1, 3), kind=NodeKind.VIEW)
     output = left + right
 
     propagate_output_grad(output, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
@@ -47,9 +48,9 @@ def test_add_unbroadcasts_gradients():
 
 
 def test_backward_walks_graph():
-    left = Tensor([1.0], shape=(1,))
-    right = Tensor([2.0], shape=(1,))
-    final_right = Tensor([3.0], shape=(1,))
+    left = Tensor([1.0], shape=(1,), kind=NodeKind.VIEW)
+    right = Tensor([2.0], shape=(1,), kind=NodeKind.VIEW)
+    final_right = Tensor([3.0], shape=(1,), kind=NodeKind.VIEW)
 
     partial_output = left + right
     final_output = partial_output + final_right
@@ -64,8 +65,8 @@ def test_backward_walks_graph():
 
 
 def test_backward_accumulates_gradients():
-    left = Tensor([1.0], shape=(1,))
-    right = Tensor([2.0], shape=(1,))
+    left = Tensor([1.0], shape=(1,), kind=NodeKind.VIEW)
+    right = Tensor([2.0], shape=(1,), kind=NodeKind.VIEW)
 
     partial_output = left + right
     final_output = partial_output + partial_output
@@ -100,12 +101,12 @@ def test_backward_fully_accumulates_shared():
     only the `*3` path), then the visited-guard blocks the `*4` path from
     ever reaching the leaves -> a.grad comes out as 15 instead of 35.
     """
-    a = Tensor([2.0], shape=(1,))
-    b = Tensor([5.0], shape=(1,))
+    a = Tensor([2.0], shape=(1,), kind=NodeKind.VIEW)
+    b = Tensor([5.0], shape=(1,), kind=NodeKind.VIEW)
 
     shared = a * b
-    left = shared * Tensor([3.0], shape=(1,))
-    right = shared * Tensor([4.0], shape=(1,))
+    left = shared * Tensor([3.0], shape=(1,), kind=NodeKind.VIEW)
+    right = shared * Tensor([4.0], shape=(1,), kind=NodeKind.VIEW)
     out = left + right
 
     out.backward()
@@ -115,8 +116,8 @@ def test_backward_fully_accumulates_shared():
 
 
 def test_sub_gradient_signs():
-    left = Tensor([2.0, 3.0], shape=(2,))
-    right = Tensor([5.0, 7.0], shape=(2,))
+    left = Tensor([2.0, 3.0], shape=(2,), kind=NodeKind.VIEW)
+    right = Tensor([5.0, 7.0], shape=(2,), kind=NodeKind.VIEW)
 
     output = left - right
     output.backward()
@@ -126,8 +127,8 @@ def test_sub_gradient_signs():
 
 
 def test_sub_unbroadcasts_gradients():
-    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
-    right = Tensor([10.0, 20.0, 30.0], shape=(1, 3))
+    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([10.0, 20.0, 30.0], shape=(1, 3), kind=NodeKind.VIEW)
 
     output = left - right
     output.backward()
@@ -137,7 +138,7 @@ def test_sub_unbroadcasts_gradients():
 
 
 def test_neg_gradient():
-    tensor = Tensor([2.0, -3.0], shape=(2,))
+    tensor = Tensor([2.0, -3.0], shape=(2,), kind=NodeKind.VIEW)
 
     output = -tensor
     output.backward()
@@ -146,8 +147,8 @@ def test_neg_gradient():
 
 
 def test_mul_gradients():
-    left = Tensor([2.0, 3.0], shape=(2,))
-    right = Tensor([5.0, 7.0], shape=(2,))
+    left = Tensor([2.0, 3.0], shape=(2,), kind=NodeKind.VIEW)
+    right = Tensor([5.0, 7.0], shape=(2,), kind=NodeKind.VIEW)
 
     output = left * right
     output.backward()
@@ -157,8 +158,8 @@ def test_mul_gradients():
 
 
 def test_mul_unbroadcasts_gradients():
-    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
-    right = Tensor([10.0, 20.0, 30.0], shape=(1, 3))
+    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([10.0, 20.0, 30.0], shape=(1, 3), kind=NodeKind.VIEW)
 
     output = left * right
     output.backward()
@@ -168,7 +169,7 @@ def test_mul_unbroadcasts_gradients():
 
 
 def test_pow_gradient():
-    tensor = Tensor([2.0, -3.0], shape=(2,))
+    tensor = Tensor([2.0, -3.0], shape=(2,), kind=NodeKind.VIEW)
 
     output = tensor**3
     output.backward()
@@ -177,7 +178,7 @@ def test_pow_gradient():
 
 
 def test_sum_gradient():
-    tensor = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2))
+    tensor = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2), kind=NodeKind.VIEW)
 
     output = tensor.sum()
     output.backward()
@@ -186,7 +187,7 @@ def test_sum_gradient():
 
 
 def test_sum_axis_gradient():
-    tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
+    tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
 
     output = tensor.sum(axis=1)
     output.backward()
@@ -195,7 +196,7 @@ def test_sum_axis_gradient():
 
 
 def test_mean_gradient():
-    tensor = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2))
+    tensor = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2), kind=NodeKind.VIEW)
 
     output = tensor.mean()
     output.backward()
@@ -204,7 +205,7 @@ def test_mean_gradient():
 
 
 def test_mean_axis_gradient():
-    tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
+    tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
 
     output = tensor.mean(axis=1)
     output.backward()
@@ -213,8 +214,8 @@ def test_mean_axis_gradient():
 
 
 def test_matmul_gradients():
-    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
-    right = Tensor([7.0, 8.0, 9.0, 10.0, 11.0, 12.0], shape=(3, 2))
+    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([7.0, 8.0, 9.0, 10.0, 11.0, 12.0], shape=(3, 2), kind=NodeKind.VIEW)
 
     output = left @ right
     output.backward()
@@ -224,8 +225,8 @@ def test_matmul_gradients():
 
 
 def test_matmul_tracks_parents():
-    left = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2))
-    right = Tensor([5.0, 6.0, 7.0, 8.0], shape=(2, 2))
+    left = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2), kind=NodeKind.VIEW)
+    right = Tensor([5.0, 6.0, 7.0, 8.0], shape=(2, 2), kind=NodeKind.VIEW)
 
     output = left @ right
 
@@ -246,9 +247,9 @@ def _weighted_matmul_loss(
     The element-wise weights give every output cell a distinct upstream
     gradient, so transposed/reordered gradient rules can't pass by accident.
     """
-    left = Tensor(list(left_data), shape=left_shape)
-    right = Tensor(list(right_data), shape=right_shape)
-    weight_tensor = Tensor(list(weights), shape=(left_shape[0], right_shape[1]))
+    left = Tensor(list(left_data), shape=left_shape, kind=NodeKind.VIEW)
+    right = Tensor(list(right_data), shape=right_shape, kind=NodeKind.VIEW)
+    weight_tensor = Tensor(list(weights), shape=(left_shape[0], right_shape[1]), kind=NodeKind.VIEW)
     loss = ((left @ right) * weight_tensor).sum()
     return loss.data[0]
 
@@ -282,9 +283,9 @@ def test_matmul_gradients_match_differences():
     right_data = [2.0, -1.0, 0.5, 3.0, 1.0, 2.5, -2.0, 0.0, -0.5, 1.5, 4.0, -3.0]
     weights = [1.0, -2.0, 3.0, 0.5, -1.5, 2.0, -0.5, 4.0]
 
-    left = Tensor(list(left_data), shape=left_shape)
-    right = Tensor(list(right_data), shape=right_shape)
-    weight_tensor = Tensor(list(weights), shape=(2, 4))
+    left = Tensor(list(left_data), shape=left_shape, kind=NodeKind.VIEW)
+    right = Tensor(list(right_data), shape=right_shape, kind=NodeKind.VIEW)
+    weight_tensor = Tensor(list(weights), shape=(2, 4), kind=NodeKind.VIEW)
 
     loss = ((left @ right) * weight_tensor).sum()
     loss.backward()
@@ -310,17 +311,17 @@ def test_matmul_accumulates_when_reused():
     """The same tensor fed to matmul twice must collect gradients from both
     consumers — matmul's backward has to play nice with the engine's
     fan-out accumulation, not overwrite."""
-    shared = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
-    right = Tensor([2.0, -1.0, 0.5, 3.0, 1.0, 2.5], shape=(3, 2))
-    weights = Tensor([1.0, -2.0, 3.0, 0.5], shape=(2, 2))
+    shared = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([2.0, -1.0, 0.5, 3.0, 1.0, 2.5], shape=(3, 2), kind=NodeKind.VIEW)
+    weights = Tensor([1.0, -2.0, 3.0, 0.5], shape=(2, 2), kind=NodeKind.VIEW)
 
     first = (shared @ right) * weights
     second = (shared @ right) * weights
     loss = (first + second).sum()
     loss.backward()
 
-    single_left = Tensor(list(shared.data), shape=shared.shape)
-    single_right = Tensor(list(right.data), shape=right.shape)
+    single_left = Tensor(list(shared.data), shape=shared.shape, kind=NodeKind.VIEW)
+    single_right = Tensor(list(right.data), shape=right.shape, kind=NodeKind.VIEW)
     single_loss = ((single_left @ single_right) * weights).sum()
     single_loss.backward()
 
@@ -329,7 +330,7 @@ def test_matmul_accumulates_when_reused():
 
 
 def test_transpose_gradient():
-    tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3))
+    tensor = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
 
     output = tensor.transpose()
     propagate_output_grad(output, [10.0, 20.0, 30.0, 40.0, 50.0, 60.0])
@@ -338,7 +339,7 @@ def test_transpose_gradient():
 
 
 def test_exp_gradient():
-    tensor = Tensor([0.0, 1.0], shape=(2,))
+    tensor = Tensor([0.0, 1.0], shape=(2,), kind=NodeKind.VIEW)
 
     output = tensor.exp()
     output.backward()
@@ -347,7 +348,7 @@ def test_exp_gradient():
 
 
 def test_log_gradient():
-    tensor = Tensor([2.0, 4.0], shape=(2,))
+    tensor = Tensor([2.0, 4.0], shape=(2,), kind=NodeKind.VIEW)
 
     output = tensor.log()
     output.backward()
@@ -356,8 +357,8 @@ def test_log_gradient():
 
 
 def test_div_gradients():
-    left = Tensor([6.0, 8.0], shape=(2,))
-    right = Tensor([2.0, 4.0], shape=(2,))
+    left = Tensor([6.0, 8.0], shape=(2,), kind=NodeKind.VIEW)
+    right = Tensor([2.0, 4.0], shape=(2,), kind=NodeKind.VIEW)
 
     output = left / right
     output.backward()
@@ -367,8 +368,8 @@ def test_div_gradients():
 
 
 def test_div_unbroadcasts_gradients():
-    left = Tensor([6.0, 8.0, 10.0, 12.0], shape=(2, 2))
-    right = Tensor([2.0, 4.0], shape=(1, 2))
+    left = Tensor([6.0, 8.0, 10.0, 12.0], shape=(2, 2), kind=NodeKind.VIEW)
+    right = Tensor([2.0, 4.0], shape=(1, 2), kind=NodeKind.VIEW)
 
     output = left / right
     output.backward()
@@ -378,7 +379,7 @@ def test_div_unbroadcasts_gradients():
 
 
 def test_relu_gradient():
-    tensor = Tensor([-2.0, 0.0, 3.0], shape=(3,))
+    tensor = Tensor([-2.0, 0.0, 3.0], shape=(3,), kind=NodeKind.VIEW)
 
     output = ReLU().forward(tensor)
     output.backward()
@@ -387,7 +388,7 @@ def test_relu_gradient():
 
 
 def test_max_gradient():
-    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,))
+    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,), kind=NodeKind.VIEW)
 
     output = tensor.max()
     output.backward()
@@ -396,7 +397,7 @@ def test_max_gradient():
 
 
 def test_max_axis_gradient():
-    tensor = Tensor([1.0, 5.0, 2.0, 9.0, 3.0, 4.0], shape=(2, 3))
+    tensor = Tensor([1.0, 5.0, 2.0, 9.0, 3.0, 4.0], shape=(2, 3), kind=NodeKind.VIEW)
 
     output = tensor.max(axis=1)
     output.backward()
@@ -405,7 +406,7 @@ def test_max_axis_gradient():
 
 
 def test_max_tie_splits_gradient():
-    tensor = Tensor([4.0, 4.0, 2.0], shape=(3,))
+    tensor = Tensor([4.0, 4.0, 2.0], shape=(3,), kind=NodeKind.VIEW)
 
     output = tensor.max()
     output.backward()
@@ -414,16 +415,16 @@ def test_max_tie_splits_gradient():
 
 
 def test_max_non_unit_upstream_gradient():
-    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,))
+    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,), kind=NodeKind.VIEW)
 
-    scaled = tensor.max() * Tensor([3.0], shape=(1,))
+    scaled = tensor.max() * Tensor([3.0], shape=(1,), kind=NodeKind.VIEW)
     scaled.backward()
 
     assert tensor.grad == approx([0.0, 3.0, 0.0])
 
 
 def test_min_gradient():
-    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,))
+    tensor = Tensor([1.0, 4.0, 2.0], shape=(3,), kind=NodeKind.VIEW)
 
     output = tensor.min()
     output.backward()
@@ -432,7 +433,7 @@ def test_min_gradient():
 
 
 def test_min_tie_splits_gradient():
-    tensor = Tensor([1.0, 1.0, 2.0], shape=(3,))
+    tensor = Tensor([1.0, 1.0, 2.0], shape=(3,), kind=NodeKind.VIEW)
 
     output = tensor.min()
     output.backward()
@@ -441,8 +442,8 @@ def test_min_tie_splits_gradient():
 
 
 def test_softmax_row_gradients():
-    logits = Tensor([0.0, 1.0, 2.0, 1.0, 1.0, 1.0], shape=(2, 3))
-    weights = Tensor([1.0, 0.0, -1.0, 2.0, -1.0, 0.5], shape=(2, 3))
+    logits = Tensor([0.0, 1.0, 2.0, 1.0, 1.0, 1.0], shape=(2, 3), kind=NodeKind.VIEW)
+    weights = Tensor([1.0, 0.0, -1.0, 2.0, -1.0, 0.5], shape=(2, 3), kind=NodeKind.VIEW)
 
     loss = (Softmax().forward(logits) * weights).sum()
     loss.backward()

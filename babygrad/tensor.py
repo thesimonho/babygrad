@@ -4,6 +4,8 @@ import math
 from collections import defaultdict
 from typing import overload
 
+from babygrad.state import _scope
+
 from . import autograd, formatting, ops, types
 from .types import NodeKind, Number
 
@@ -44,17 +46,27 @@ class Tensor:
         self,
         data: list[types.Number],
         shape: types.Shape,
+        kind: NodeKind,
+        name: str | None = None,
+        scope: str | None = None,
     ) -> None:
+        """Tensor constructor.
+
+        Args:
+            data: Tensor values as a flat list.
+            shape: Shape of the tensor.
+            kind: NodeKind of the tensor. Role in the graph. Whoever creates the tensor for a purpose stamps it.
+            name: Name of the tensor.
+            scope: Layer scope of the tensor. For graph clustering (None = outside any).
+        """
         assert len(data) == math.prod(shape), "Tensor data has incorrect shape"
         self.data = data
         self.shape = shape
         self.grad = [0.0 for _ in self.data]
         self.producer: ops.Op | None = None
-        self.name: str | None = None
-        # role in the graph; whoever creates the tensor for a purpose stamps it
-        self.kind: NodeKind | None = None
-        # layer the tensor belongs to, for graph clustering (None = outside any)
-        self.scope: str | None = None
+        self.name = name
+        self.kind = kind
+        self.scope = scope
 
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the tensor contents."""
@@ -80,7 +92,9 @@ class Tensor:
                 yield value
         else:
             for i in range(self.nrow):
-                yield Tensor(self._get_row_data(i), shape=(self.ncol,))
+                yield Tensor(
+                    self._get_row_data(i), shape=(self.ncol,), kind=NodeKind.VIEW
+                )
 
     @overload
     def __getitem__(self, key: int) -> types.Number | Tensor: ...
@@ -102,7 +116,9 @@ class Tensor:
             data = []
             for r in range(start, end, step):
                 data.extend(self._get_row_data(r))
-            return Tensor(data, (len(range(start, end, step)), self.ncol))
+            return Tensor(
+                data, (len(range(start, end, step)), self.ncol), kind=NodeKind.VIEW
+            )
 
         if isinstance(key, int):
             norm_key = (key,)
@@ -128,7 +144,9 @@ class Tensor:
         elif len(norm_key) == 1 and self.ndim == 2:
             row = norm_key[0]
             if row >= 0 and row < self.nrow:
-                return Tensor(self._get_row_data(row), shape=(self.ncol,))
+                return Tensor(
+                    self._get_row_data(row), shape=(self.ncol,), kind=NodeKind.VIEW
+                )
             else:
                 raise IndexError(
                     f"Row index {row} is out of bounds. Row count = {self.nrow}"
@@ -162,11 +180,37 @@ class Tensor:
         autograd.count_children(self, visited, child_counts)
         autograd.backward_walk(self, child_counts)
 
-    def __add__(self, t: Tensor) -> Tensor:
+    @overload
+    def __add__(self, t: Number) -> Tensor: ...
+    @overload
+    def __add__(self, t: Tensor) -> Tensor: ...
+    def __add__(self, t) -> Tensor:
+        t = to_stamped_scalar(t)
         return ops.Add([self, t]).forward()
 
-    def __sub__(self, t: Tensor) -> Tensor:
+    @overload
+    def __radd__(self, t: Number) -> Tensor: ...
+    @overload
+    def __radd__(self, t: Tensor) -> Tensor: ...
+    def __radd__(self, t) -> Tensor:
+        t = to_stamped_scalar(t)
+        return ops.Add([t, self]).forward()
+
+    @overload
+    def __sub__(self, t: Number) -> Tensor: ...
+    @overload
+    def __sub__(self, t: Tensor) -> Tensor: ...
+    def __sub__(self, t) -> Tensor:
+        t = to_stamped_scalar(t)
         return ops.Sub([self, t]).forward()
+
+    @overload
+    def __rsub__(self, t: Number) -> Tensor: ...
+    @overload
+    def __rsub__(self, t: Tensor) -> Tensor: ...
+    def __rsub__(self, t) -> Tensor:
+        t = to_stamped_scalar(t)
+        return ops.Sub([t, self]).forward()
 
     def __abs__(self) -> Tensor:
         return ops.Abs([self]).forward()
@@ -182,8 +226,7 @@ class Tensor:
     @overload
     def __truediv__(self, t: Tensor) -> Tensor: ...
     def __truediv__(self, t) -> Tensor:
-        if isinstance(t, int | float):
-            t = Tensor([t], shape=(1,))
+        t = to_stamped_scalar(t)
         return ops.Div([self, t]).forward()
 
     @overload
@@ -191,14 +234,23 @@ class Tensor:
     @overload
     def __rtruediv__(self, t: Tensor) -> Tensor: ...
     def __rtruediv__(self, t) -> Tensor:
-        if isinstance(t, int | float):
-            t = Tensor([t], shape=(1,))
+        t = to_stamped_scalar(t)
         return ops.Div([t, self]).forward()
 
-    def __mul__(self, t: Tensor) -> Tensor:
+    @overload
+    def __mul__(self, t: Number) -> Tensor: ...
+    @overload
+    def __mul__(self, t: Tensor) -> Tensor: ...
+    def __mul__(self, t) -> Tensor:
+        t = to_stamped_scalar(t)
         return ops.Mul([self, t]).forward()
 
-    def __rmul__(self, t: Tensor) -> Tensor:
+    @overload
+    def __rmul__(self, t: Number) -> Tensor: ...
+    @overload
+    def __rmul__(self, t: Tensor) -> Tensor: ...
+    def __rmul__(self, t) -> Tensor:
+        t = to_stamped_scalar(t)
         return ops.Mul([t, self]).forward()
 
     def __matmul__(self, t: Tensor) -> Tensor:
@@ -239,3 +291,14 @@ class Tensor:
 
     def min(self, axis: int | None = None):
         return ops.Min([self], axis).forward()
+
+
+def to_stamped_scalar(value: Number | Tensor) -> Tensor:
+    """
+    Helper to convert a number to a stamped constant tensor.
+    """
+    if isinstance(value, Tensor):
+        return value
+
+    t = Tensor([value], shape=(1,), kind=NodeKind.CONSTANT, scope=_scope.get())
+    return t

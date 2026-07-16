@@ -18,6 +18,7 @@ class NodeKind(Enum):
     role directly instead of inferring it from which attributes are set.
 
     Stamped at the authoritative site for each role:
+      - VIEW:           structural Tensor view (e.g. slice of a batch)
       - INPUT / TARGET: where data enters the graph (Sequential.forward / Loss)
       - PARAMETER:      Linear.__init__ (model state)
       - OP:             the Op class itself (every op is an OP)
@@ -30,6 +31,7 @@ class NodeKind(Enum):
     are more specific roles that override it (most-specific owner stamps last).
     """
 
+    VIEW = auto()
     INPUT = auto()
     TARGET = auto()
     PARAMETER = auto()

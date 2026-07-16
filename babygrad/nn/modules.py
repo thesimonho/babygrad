@@ -114,14 +114,17 @@ class Linear(Module):
         self.weights = Tensor(
             initializer((input_size, output_size)).generate(),
             shape=(input_size, output_size),
+            kind=NodeKind.PARAMETER,
+            name="weights",
         )
-        self.weights.name = "weights"
-        self.weights.kind = NodeKind.PARAMETER
 
         # add bias for each output column
-        self.bias = Tensor([0.0] * output_size, shape=(1, output_size))
-        self.bias.name = "bias"
-        self.bias.kind = NodeKind.PARAMETER
+        self.bias = Tensor(
+            [0.0] * output_size,
+            shape=(1, output_size),
+            kind=NodeKind.PARAMETER,
+            name="bias",
+        )
 
     def own_parameters(self):
         return [self.bias, self.weights]
@@ -144,7 +147,13 @@ class Dropout(Module):
                 keep_values.append(keep)
 
             # no need to store this as gradient will already be multipled by the mask values via autograd
-            dropout_mask = Tensor(data=keep_values, shape=input.shape)
+            dropout_mask = Tensor(
+                data=keep_values,
+                shape=input.shape,
+                kind=NodeKind.CONSTANT,
+                scope=_scope.get(),
+                name="mask",
+            )
             output = (input / (1 - self.p)) * dropout_mask
             return output
 
@@ -180,14 +189,20 @@ class BatchNorm(Module):
         self.epsilon = epsilon
         self.n_features = n_features
 
-        self.gamma = Tensor([1.0] * n_features, shape=(1, n_features))
-        self.gamma.name = "gamma"
-        self.gamma.kind = NodeKind.PARAMETER
+        self.gamma = Tensor(
+            [1.0] * n_features,
+            shape=(1, n_features),
+            kind=NodeKind.PARAMETER,
+            name="gamma",
+        )
 
         # add bias for each output column
-        self.beta = Tensor([0.0] * n_features, shape=(1, n_features))
-        self.beta.name = "beta"
-        self.beta.kind = NodeKind.PARAMETER
+        self.beta = Tensor(
+            [0.0] * n_features,
+            shape=(1, n_features),
+            kind=NodeKind.PARAMETER,
+            name="beta",
+        )
 
         self.running_mean = [0.0] * n_features
         self.running_var = [1.0] * n_features
@@ -199,27 +214,34 @@ class BatchNorm(Module):
         mean = (
             input.mean(axis=0)
             if _is_training.get()
-            else Tensor(self.running_mean, shape=((1, self.n_features)))
+            else Tensor(
+                self.running_mean,
+                shape=((1, self.n_features)),
+                kind=NodeKind.CONSTANT,
+                scope=_scope.get(),
+                name="mean",
+            )
         )
 
         variance = (
             ((input - mean) ** 2).mean(axis=0)
             if _is_training.get()
-            else Tensor(self.running_var, shape=((1, self.n_features)))
+            else Tensor(
+                self.running_var,
+                shape=((1, self.n_features)),
+                kind=NodeKind.CONSTANT,
+                scope=_scope.get(),
+                name="variance",
+            )
         )
 
-        if not _is_training.get():
-            mean.name = "running_mean"
-            mean.scope = _scope.get()
-            mean.kind = NodeKind.CONSTANT
-            variance.name = "running_variance"
-            variance.scope = _scope.get()
-            variance.kind = NodeKind.CONSTANT
-
-        epsilon = Tensor([self.epsilon], shape=(1,))
-        epsilon.name = "epsilon"
-        epsilon.scope = _scope.get()
-        epsilon.kind = NodeKind.CONSTANT
+        epsilon = Tensor(
+            [self.epsilon],
+            shape=(1,),
+            kind=NodeKind.CONSTANT,
+            scope=_scope.get(),
+            name="epsilon",
+        )
 
         std = (variance + epsilon).sqrt()
 
@@ -253,13 +275,21 @@ class LayerNorm(Module):
         super().__init__()
         self.n_features = n_features
 
-        self.gain = Tensor([1.0] * n_features, shape=(1, n_features))
-        self.gain.name = "gain"
-        self.gain.kind = NodeKind.PARAMETER
+        self.gain = Tensor(
+            [1.0] * n_features,
+            shape=(1, n_features),
+            kind=NodeKind.PARAMETER,
+            name="gain",
+            scope=_scope.get(),
+        )
 
-        self.bias = Tensor([0.0] * n_features, shape=(1, n_features))
-        self.bias.name = "bias"
-        self.bias.kind = NodeKind.PARAMETER
+        self.bias = Tensor(
+            [0.0] * n_features,
+            shape=(1, n_features),
+            kind=NodeKind.PARAMETER,
+            name="bias",
+            scope=_scope.get(),
+        )
 
     def own_parameters(self):
         return [self.bias, self.gain]

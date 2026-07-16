@@ -1,5 +1,6 @@
 from babygrad.nn.modules import BatchNorm, Linear, Model, Residual, Sequential
 from babygrad.tensor import Tensor
+from babygrad.types import NodeKind
 
 
 def test_residual_add_scoped_to_residual_not_inner_block():
@@ -17,7 +18,7 @@ def test_residual_add_scoped_to_residual_not_inner_block():
     model = Model(Sequential([residual]))
 
     # the Residual's add is the graph's final tensor for this model
-    output = model.forward(Tensor([1.0, 2.0], shape=(1, 2)))
+    output = model.forward(Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW))
 
     assert residual.name == "Sequential_0/Residual_0"
     assert output.scope == residual.name
@@ -35,7 +36,7 @@ def test_batchnorm_reads_training_mode_even_when_nested_in_residual():
     """
     batch_norm = BatchNorm(2)
     model = Model(Sequential([Residual(Sequential([batch_norm]))]))
-    x = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2))
+    x = Tensor([1.0, 2.0, 3.0, 4.0], shape=(2, 2), kind=NodeKind.VIEW)
 
     frozen_running_mean = list(batch_norm.running_mean)
 

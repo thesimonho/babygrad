@@ -8,6 +8,7 @@ from babygrad.nn.modules import Linear, Model, Sequential
 from babygrad.recorder import Recorder
 from babygrad.viz.plot import PlotVisualizer, _bin_counts
 from babygrad.tensor import Tensor
+from babygrad.types import NodeKind
 
 
 SCALAR_HISTORY: History = {"loss": {0: 1.5, 1: 1.2, 2: 0.9}}
@@ -63,7 +64,7 @@ def test_bin_counts_clamps_outliers_into_edge_bins():
 def test_capture_records_named_tensors():
     recorder = Recorder()
     model = Model(Sequential([Linear(2, 3), ReLU()]))
-    x = Tensor([1.0, 2.0], shape=(1, 2))
+    x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
 
     recorder.step = 0
     output = model.forward(x)
@@ -82,7 +83,7 @@ def test_captured_weights_are_snapshots():
     recorder = Recorder()
     layer = Linear(2, 3)
     model = Model(Sequential([layer]))
-    x = Tensor([1.0, 2.0], shape=(1, 2))
+    x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
 
     recorder.step = 0
     recorder.capture(model.forward(x))
@@ -99,7 +100,7 @@ def test_captured_weights_are_snapshots():
 
 def test_no_capture_records_nothing():
     model = Sequential([Linear(2, 3)])
-    x = Tensor([1.0, 2.0], shape=(1, 2))
+    x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
 
     result = model.forward(x)
 
@@ -110,7 +111,7 @@ def test_capture_records_grads():
     recorder = Recorder()
     layer = Linear(2, 3)
     model = Model(Sequential([layer]))
-    x = Tensor([1.0, 2.0], shape=(1, 2))
+    x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
 
     output = model.forward(x)
     output.sum().backward()
@@ -128,7 +129,7 @@ def test_captured_grads_survive_zero_grad():
     recorder = Recorder()
     layer = Linear(2, 3)
     model = Model(Sequential([layer]))
-    x = Tensor([1.0, 2.0], shape=(1, 2))
+    x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
     output = model.forward(x)
     layer.weights.grad[0] = 7.0
 

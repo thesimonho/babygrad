@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 from babygrad import formatting
+from babygrad.types import NodeKind
 from babygrad.tensor import Tensor
 
 
@@ -185,8 +186,10 @@ class DataLoader:
                 y.extend(row.target)
                 y_cols = len(row.target)
 
-        features = Tensor(x, shape=(len(rows), len(rows[0].features)))
-        target = Tensor(y, shape=(len(rows), y_cols))
+        features = Tensor(
+            x, shape=(len(rows), len(rows[0].features)), kind=NodeKind.INPUT
+        )
+        target = Tensor(y, shape=(len(rows), y_cols), kind=NodeKind.TARGET)
         return Batch(features, target)
 
     def full_batch(self) -> Batch:
