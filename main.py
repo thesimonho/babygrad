@@ -63,6 +63,7 @@ def train_iris():
         position=1,
     )
 
+    train_loss: Tensor | None = None
     for e in progress_epoch:
         optimizer.lr = scheduler(e)
         recorder.step = e
@@ -72,7 +73,6 @@ def train_iris():
 
         accum_loss = []
         accum_acc = []
-        train_loss: Tensor | None = None
         for x, y in minibatches:
             optimizer.zero_grad()
 
@@ -117,10 +117,11 @@ def train_iris():
     acc = accuracy(y, y_pred)
     print(f"\ntest loss: {test_loss.data[0]:.4f}, test acc: {acc:.3f}")
 
-    visualizer = GraphVisualizer(train_loss)
-    visualizer.draw_architecture(save_path="./plots/architecture.svg")
-    visualizer.draw_computation(save_path="./plots/computation.svg")
-    visualizer.draw_combined(save_path="./plots/combined.svg")
+    if train_loss is not None:
+        visualizer = GraphVisualizer(train_loss)
+        visualizer.draw_architecture(save_path="./plots/architecture.svg")
+        visualizer.draw_computation(save_path="./plots/computation.svg")
+        visualizer.draw_combined(save_path="./plots/combined.svg")
 
     # with PlotVisualizer(recorder.history) as visualizer:
     #     visualizer.plot_scalar(["loss", "val_loss"])
