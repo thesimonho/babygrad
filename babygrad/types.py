@@ -1,5 +1,6 @@
 """Shared type vocabulary: structural aliases and domain value types."""
 
+from dataclasses import dataclass
 from enum import Enum, auto
 
 type Number = int | float
@@ -40,3 +41,18 @@ class NodeKind(Enum):
     LAYER_OUTPUT = auto()
     LOSS = auto()
     CONSTANT = auto()
+
+
+@dataclass
+class Scope:
+    """One node in the module containment tree: a box that holds graph nodes and
+    nests inside its ``outer_scope``.
+
+    Structure is declared, not parsed: ``outer_scope`` names the enclosing scope
+    directly, so consumers walk pointers instead of splitting the ``id`` path.
+    """
+
+    id: str
+    label: str
+    outer_scope: str | None
+    collapsed: bool

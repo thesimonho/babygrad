@@ -218,7 +218,11 @@ Everything else runs without it.
   - [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) — Szegedy et al., 2016
 - [ ] **Data pipeline — sequence collation** — pad + mask variable-length sequences and lazily load tokens by offset, extending the eager tabular collate
 
----
+#### Phase 8: detour
+
+- [✨] Get completely sidetracked by making plots, visualizations, and other fun things
+
+#### Phase 8: ...and we're back
 
 **The transformer** — [Attention Is All You Need](https://arxiv.org/abs/1706.03762) (Vaswani et al., 2017):
 

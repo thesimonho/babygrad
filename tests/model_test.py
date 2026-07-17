@@ -57,6 +57,30 @@ def test_batchnorm_reads_training_mode_even_when_nested_in_residual():
     assert batch_norm.running_mean != frozen_running_mean
 
 
+def test_stamp_materialises_scope_tree_with_outer_links():
+    """stamp_name_and_scope builds an explicit Scope per module, linked to its
+    enclosing scope, so consumers read structure without splitting the id path."""
+    model = Model(Sequential([Residual(Sequential([Linear(2, 2)]))]))
+
+    top = model.scopes["Sequential_0"]
+    assert top.outer_scope is None
+    assert top.label == "Sequential_0"
+
+    residual = model.scopes["Sequential_0/Residual_0"]
+    assert residual.outer_scope == "Sequential_0"
+    assert residual.label == "Residual_0"
+
+
+def test_stamp_records_collapse_flag_on_scope():
+    """A module's collapse flag lands on its Scope, matching the legacy string set."""
+    model = Model(Sequential([Sequential([Linear(2, 2)], collapse=True)]))
+
+    assert model.scopes["Sequential_0/Sequential_0"].collapsed is True
+    assert model.scopes["Sequential_0"].collapsed is False
+    # additive slice: the legacy string set still agrees
+    assert "Sequential_0/Sequential_0" in model.collapsed_scopes
+
+
 def _tiny_regression_split() -> DataSplit:
     """Three-row, two-feature regression split — enough to run real batches
     cheaply. No one-hot mapping, so ``n_targets`` is just the scalar target.

@@ -9,7 +9,7 @@ from babygrad.data import DataLoader
 from babygrad.recorder import Recorder
 from babygrad.state import _is_training, bound
 from babygrad.tensor import Tensor
-from babygrad.types import Number
+from babygrad.types import Number, Scope
 
 if TYPE_CHECKING:
     from babygrad.data import DataSplit
@@ -36,6 +36,10 @@ class Model:
         # scopes of modules asking to be drawn as one box. collected here because this
         # walk is the only place a live Module and its final scope string coexist.
         self.collapsed_scopes: set[str] = set()
+        # explicit containment tree, built as we stamp: each module becomes a Scope
+        # linked to its outer scope, so consumers read structure instead of
+        # re-splitting the name string.
+        self.scopes: dict[str, Scope] = {}
         self.stamp_name_and_scope(self.root)
 
     def eval(self, x: Tensor) -> Tensor:
@@ -53,7 +57,14 @@ class Model:
         """
         Set the name and scope of all descendent Modules and their children
         """
-        root.name = f"{prefix + '/' if prefix else ''}{root.name}_{idx}"
+        leaf = f"{root.name}_{idx}"
+        root.name = f"{prefix}/{leaf}" if prefix else leaf
+        self.scopes[root.name] = Scope(
+            id=root.name,
+            label=leaf,
+            outer_scope=prefix or None,
+            collapsed=root.collapse,
+        )
         if root.collapse:
             self.collapsed_scopes.add(root.name)
 
