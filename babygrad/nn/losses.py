@@ -13,6 +13,18 @@ class Loss(ABC):
     op output, but LOSS is its more specific role, so it overrides OP_RESULT.
     """
 
+    def __init__(self, collapse: bool = False):
+        self.collapse = collapse
+
+    @property
+    def collapsed_scopes(self) -> set[str]:
+        """Scopes to draw as one box, for GraphVisualizer.
+
+        A Loss reports its own because it sits outside the Module tree, so
+        Model.stamp_name_and_scope never walks it. Union this with the model's.
+        """
+        return {type(self).__name__} if self.collapse else set()
+
     def forward(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
         y_true.kind = NodeKind.TARGET
         # scope the loss ops so they cluster into their own box, like a layer
@@ -30,7 +42,8 @@ class Loss(ABC):
 class CCE(Loss):
     """Categorical cross-entropy for one hot targets."""
 
-    def __init__(self, epsilon: float = 0.0):
+    def __init__(self, epsilon: float = 0.0, collapse: bool = False):
+        super().__init__(collapse)
         self.epsilon = epsilon
 
     def compute(self, y_true: Tensor, y_pred: Tensor) -> Tensor:

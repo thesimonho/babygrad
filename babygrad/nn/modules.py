@@ -13,9 +13,12 @@ class Module(ABC):
     and edge data for the graph
     """
 
-    def __init__(self):
+    def __init__(self, collapse: bool = False):
         # bare type name by default; Sequential re-stamps it with an index
         self.name = type(self).__name__
+        # draw this module as a single box, hiding its internals. Model.stamp_name_and_scope
+        # reads it once the name is fully qualified; the graph only ever sees the scope string.
+        self.collapse = collapse
 
     def children(self) -> list[Module]:
         """
@@ -45,8 +48,8 @@ class Module(ABC):
 
 
 class Sequential(Module):
-    def __init__(self, layers: list[Module]):
-        super().__init__()
+    def __init__(self, layers: list[Module], collapse: bool = False):
+        super().__init__(collapse)
         self.layers = layers
 
     def children(self) -> list[Module]:
@@ -75,11 +78,12 @@ class Linear(Module):
         input_size,
         output_size,
         weight_init: type[WeightInitializer] | None = None,
+        collapse: bool = False,
     ):
         """
         Maps input_size features to output_size nodes; output_size is the layer width.
         """
-        super().__init__()
+        super().__init__(collapse)
         initializer = weight_init or Glorot
         self.weights = Tensor(
             initializer((input_size, output_size)).generate(),
@@ -104,9 +108,9 @@ class Linear(Module):
 
 
 class Dropout(Module):
-    def __init__(self, p: float = 0.5):
+    def __init__(self, p: float = 0.5, collapse: bool = False):
         assert p < 1.0 and p >= 0.0
-        super().__init__()
+        super().__init__(collapse)
         self.p = p
 
     def forward(self, input: Tensor) -> Tensor:
@@ -131,8 +135,8 @@ class Dropout(Module):
 
 
 class Residual(Module):
-    def __init__(self, block: Module):
-        super().__init__()
+    def __init__(self, block: Module, collapse: bool = False):
+        super().__init__(collapse)
         self.block = block
 
     def children(self) -> list[Module]:
@@ -154,8 +158,9 @@ class BatchNorm(Module):
         self,
         n_features: int,
         epsilon: float = 1e-5,
+        collapse: bool = False,
     ):
-        super().__init__()
+        super().__init__(collapse)
         self.epsilon = epsilon
         self.n_features = n_features
 
@@ -241,8 +246,8 @@ class LayerNorm(Module):
     2) does not require a training-time mean and variance
     """
 
-    def __init__(self, n_features: int):
-        super().__init__()
+    def __init__(self, n_features: int, collapse: bool = False):
+        super().__init__(collapse)
         self.n_features = n_features
 
         self.gain = Tensor(

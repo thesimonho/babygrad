@@ -33,6 +33,9 @@ class TrainConfig:
 class Model:
     def __init__(self, root: Module):
         self.root = root
+        # scopes of modules asking to be drawn as one box. collected here because this
+        # walk is the only place a live Module and its final scope string coexist.
+        self.collapsed_scopes: set[str] = set()
         self.stamp_name_and_scope(self.root)
 
     def eval(self, x: Tensor) -> Tensor:
@@ -51,6 +54,8 @@ class Model:
         Set the name and scope of all descendent Modules and their children
         """
         root.name = f"{prefix + '/' if prefix else ''}{root.name}_{idx}"
+        if root.collapse:
+            self.collapsed_scopes.add(root.name)
 
         for idx, c in enumerate(root.children()):
             self.stamp_name_and_scope(c, root.name, idx)
