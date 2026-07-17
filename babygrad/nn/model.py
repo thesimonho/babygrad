@@ -77,71 +77,41 @@ class Trainer:
         """
         Train the model on the train split, validating on the val split.
         """
-
         n_batches = ceil(train.nrow / self.config.batch_size)
-        progress_epoch = tqdm(range(self.config.epochs), desc="train (epochs)")
-        progress_batch = tqdm(
-            total=n_batches,
-            desc="train (batch)",
-            leave=False,
-            position=1,
-        )
+        assert n_batches > 0, ValueError("Training data contains no rows/batches.")
 
-        train_loss: Tensor | None = None
+        reporter = TrainingReporter(self.recorder, self.config, n_batches)
 
-        for e in progress_epoch:
-            progress_batch.reset()
+        for e in range(self.config.epochs):
+            reporter.start_epoch(e)
             self.config.optimizer.lr = self.config.scheduler(e)
-            if self.recorder is not None:
-                self.recorder.step = e
 
-            accum_loss = []
-            epoch_metrics: DefaultDict[str, list[Number]] = defaultdict(list)
+            # training
             batches = DataLoader(train, self.config.batch_size)
-            batch_sizes = []
-
             for x_train, y_train in batches:
-                self.config.optimizer.zero_grad()
-
-                pred_train = self.model.forward(x_train)
-                with bound(_is_training, True):
-                    train_loss = self.config.criterion.forward(y_train, pred_train)
-
-                batch_sizes.append(y_train.nrow)
-                accum_loss.append(train_loss.data[0])
-
-                if self.config.metrics is not None:
-                    for metric in self.config.metrics:
-                        epoch_metrics[metric.name].append(
-                            metric.compute(y_train, pred_train)
-                        )
-
-                train_loss.backward()
-                self.config.optimizer.step()
-
-                progress_batch.set_postfix(
-                    {
-                        name: f"{weighted_mean(values, batch_sizes):.3g}"
-                        for name, values in epoch_metrics.items()
-                    },
-                    loss=f"{train_loss.data[0]:.3g}",
-                )
-                progress_batch.update()
+                pred_train, train_loss_tensor = self._train_one_batch(x_train, y_train)
+                reporter.on_batch(y_train, pred_train, train_loss_tensor)
 
             # validation
-            validation_loss, _ = self.evaluate(val)
+            validation_loss_value, _ = self.evaluate(val)
+            reporter.end_epoch(validation_loss_value)
 
-            if self.recorder is not None:
-                if train_loss is not None:
-                    self.recorder.capture(root=train_loss)
-                self.recorder.record("loss", weighted_mean(accum_loss, batch_sizes))
-                self.recorder.record("val_loss", validation_loss)
-                if self.config.metrics is not None:
-                    for name, values in epoch_metrics.items():
-                        self.recorder.record(name, weighted_mean(values, batch_sizes))
+        train_loss_tensor = reporter.loss_tensor
+        reporter.close()
+        return train_loss_tensor
 
-        progress_batch.close()
-        return train_loss
+    def _train_one_batch(
+        self, x_train: Tensor, y_train: Tensor
+    ) -> tuple[Tensor, Tensor]:
+        self.config.optimizer.zero_grad()
+        pred_train = self.model.forward(x_train)
+        with bound(_is_training, True):
+            loss_tensor = self.config.criterion.forward(y_train, pred_train)
+
+        loss_tensor.backward()
+        self.config.optimizer.step()
+
+        return pred_train, loss_tensor
 
     def test(self, test: DataSplit) -> None:
         """
@@ -170,7 +140,78 @@ class Trainer:
         return loss.data[0], metrics_output
 
 
-def weighted_mean(values: list[Number], batch_sizes: list[int]) -> float:
-    assert len(values) > 0 and len(batch_sizes) > 0
-    assert len(values) == len(batch_sizes)
-    return sum(v * n for v, n in zip(values, batch_sizes)) / sum(batch_sizes)
+class TrainingReporter:
+    def __init__(self, recorder: Recorder | None, config: TrainConfig, n_batches: int):
+        self.recorder = recorder
+        self.config = config
+        self.batch_sizes: list[int] = []
+        self.accum_loss: list[Number] = []
+        self.epoch_metrics: DefaultDict[str, list[Number]] = defaultdict(list)
+        self.loss_tensor: Tensor | None = None
+
+        self.progress_epoch = tqdm(
+            total=self.config.epochs, desc="train (epochs)", leave=True, position=0
+        )
+        self.progress_batch = tqdm(
+            total=n_batches,
+            desc="train (batch)",
+            leave=False,
+            position=1,
+        )
+
+    def start_epoch(self, epoch: int) -> None:
+        self.progress_batch.reset()
+        self.loss_tensor = None
+        self.batch_sizes = []
+        self.accum_loss = []
+        self.epoch_metrics: DefaultDict[str, list[Number]] = defaultdict(list)
+
+        if self.recorder is None:
+            return
+        self.recorder.step = epoch
+
+    def on_batch(self, y: Tensor, pred: Tensor, loss: Tensor) -> None:
+        self.loss_tensor = loss
+        self.batch_sizes.append(y.nrow)
+        self.accum_loss.append(loss.data[0])
+
+        if self.config.metrics is not None:
+            for metric in self.config.metrics:
+                self.epoch_metrics[metric.name].append(metric.compute(y, pred))
+
+        self.progress_batch.set_postfix(
+            {
+                name: f"{self._batch_weighted_mean(values):.3f}"
+                for name, values in self.epoch_metrics.items()
+            },
+            loss=f"{loss.data[0]:.3f}",
+        )
+        self.progress_batch.update()
+
+    def end_epoch(self, validation_loss_value: Number) -> None:
+        if self.recorder is None:
+            return
+
+        if self.loss_tensor is not None:
+            self.recorder.capture(root=self.loss_tensor)
+        self.recorder.record("loss", self._batch_weighted_mean(self.accum_loss))
+        self.recorder.record("val_loss", validation_loss_value)
+        if self.config.metrics is not None:
+            for name, values in self.epoch_metrics.items():
+                self.recorder.record(name, self._batch_weighted_mean(values))
+
+        self.progress_epoch.update()
+
+    def close(self) -> None:
+        self.progress_batch.close()
+        self.progress_epoch.close()
+
+    def _batch_weighted_mean(self, values: list[Number]) -> float:
+        """
+        Calculate a mean weighted by the size of each batch.
+        """
+        assert len(values) > 0 and len(self.batch_sizes) > 0
+        assert len(values) == len(self.batch_sizes)
+        return sum(v * n for v, n in zip(values, self.batch_sizes)) / sum(
+            self.batch_sizes
+        )
