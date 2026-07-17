@@ -35,7 +35,7 @@ def train_iris():
             Residual(
                 Sequential(
                     [Linear(128, 128), BatchNorm(128), ReLU(), Dropout(0.8)],
-                )
+                ),
             ),
             Linear(128, train.n_targets),
             Softmax(),
@@ -47,7 +47,7 @@ def train_iris():
         batch_size=10,
         optimizer=SGD(root.parameters()),
         scheduler=ConstantLR(0.1),
-        criterion=CCE(0.1),
+        criterion=CCE(0.1, collapse=True),
         metrics=[Accuracy()],
     )
     model = Model(root)
@@ -57,20 +57,21 @@ def train_iris():
     trainer.test(test)
 
     if train_loss is not None:
-        visualizer = GraphVisualizer(train_loss)
+        collapsed_scopes = model.collapsed_scopes | config.criterion.collapsed_scopes
+        visualizer = GraphVisualizer(train_loss, collapsed_scopes)
         visualizer.draw_architecture(save_path="./plots/architecture.svg")
         visualizer.draw_computation(save_path="./plots/computation.svg")
         visualizer.draw_combined(save_path="./plots/combined.svg")
 
-    with PlotVisualizer(recorder.history) as visualizer:
-        visualizer.plot_scalar(["loss", "val_loss"], save_path="./plots/loss.png")
-        visualizer.plot_scalar(["Accuracy"], save_path="./plots/accuracy.png")
-        visualizer.plot_ridge("Linear_0/weights", save_path="./plots/weights.png")
-        visualizer.plot_ridge(
-            "Linear_3/weights/grad",
-            clip_quantiles=(0.01, 0.99),
-            save_path="./plots/grad.png",
-        )
+    plotter = PlotVisualizer(recorder.history)
+    plotter.plot_scalar(["loss", "val_loss"], save_path="./plots/loss.png")
+    plotter.plot_scalar(["Accuracy"], save_path="./plots/accuracy.png")
+    plotter.plot_ridge("Linear_0/weights", save_path="./plots/weights.png")
+    plotter.plot_ridge(
+        "Linear_3/weights/grad",
+        clip_quantiles=(0.01, 0.99),
+        save_path="./plots/grad.png",
+    )
 
 
 def train_resnet():
@@ -101,7 +102,7 @@ def train_resnet():
         batch_size=64,
         optimizer=Adam(root.parameters()),
         scheduler=CosineAnnealingLR(T_0=1, T_mult=2),
-        criterion=CCE(),
+        criterion=CCE(collapse=True),
         metrics=[Accuracy()],
     )
     model = Model(root)

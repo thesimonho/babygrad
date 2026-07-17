@@ -4,7 +4,6 @@ Render an autograd graph: extract a neutral bipartite structure, then draw it.
 
 from __future__ import annotations
 
-import zlib
 from dataclasses import dataclass, field
 
 import graphviz
@@ -12,6 +11,7 @@ import graphviz
 from babygrad.ops import Op
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind, Shape
+from babygrad.viz import _theme
 
 
 @dataclass
@@ -44,52 +44,6 @@ class _ScopeTree:
     children: dict[str, "_ScopeTree"] = field(default_factory=dict)
 
 
-_GRAPH_ATTR = {
-    "rankdir": "TB",
-    "bgcolor": "white",
-    "splines": "spline",
-    "nodesep": "0.35",
-    "ranksep": "0.6",
-}
-_NODE_ATTR = {
-    "fontname": "Helvetica",
-    "penwidth": "0",
-    "margin": "0.18,0.07",
-}
-_EDGE_ATTR = {
-    "color": "#9aa3ab",
-    "arrowsize": "0.7",
-    "penwidth": "1.2",
-    "fontname": "Helvetica",
-    "fontsize": "9",
-    "fontcolor": "#6c757d",
-}
-
-_DEFAULT_STYLE = ("box", "#edf2f4", "#495057")
-_NODE_STYLE: dict[NodeKind, tuple[str, str, str]] = {
-    NodeKind.INPUT: ("box", "#e9c46a", "#3d3d3d"),
-    NodeKind.TARGET: ("box", "#e9c46a", "#3d3d3d"),
-    NodeKind.PARAMETER: ("box", "#a8dadc", "#1d3557"),
-    NodeKind.OP: ("ellipse", "#e63946", "white"),
-    NodeKind.OP_RESULT: ("box", "#edf2f4", "#495057"),
-    NodeKind.LAYER_OUTPUT: ("box", "#457b9d", "white"),
-    NodeKind.LOSS: ("box", "#1d3557", "white"),
-    NodeKind.CONSTANT: ("box", "#8a6bb5", "white"),
-}
-
-# (fill, border) pairs — Picked per cluster by a stable hash of its scope path, so a given scope keeps its colour across renders and sibling boxes read as distinct.
-_CLUSTER_PALETTE: list[tuple[str, str]] = [
-    ("#eef4fb", "#c3d9ee"),  # blue
-    ("#eef7f0", "#c6e4cd"),  # green
-    ("#fbf4e9", "#ecd9b8"),  # amber
-    ("#f5eefb", "#dcc6ee"),  # purple
-    ("#eafaf7", "#bfe6dd"),  # teal
-    ("#fbeef2", "#eec6d2"),  # rose
-    ("#f2f3f5", "#dadde1"),  # slate
-    ("#f6f8ea", "#dde6bb"),  # lime
-]
-
-
 def _format_shape(shape: Shape) -> str:
     return "×".join(str(dim) for dim in shape)
 
@@ -101,42 +55,61 @@ class GraphVisualizer:
     combined (clustered by layer scope), architecture (collapsed).
     """
 
-    def __init__(self, root: Tensor):
+    def __init__(self, root: Tensor, collapsed_scopes: set[str] | None = None):
         self.root = root
+        # scope strings to fold into one box in the combined view, with their
+        # descendants. Model.collapsed_scopes supplies these; a bare tensor graph
+        # has none, which is why this defaults empty rather than requiring a Model.
+        self.collapsed_scopes = collapsed_scopes or set()
         self.graph = Graph(nodes=dict(), edges=set())
         self._walk(self.root, set(), self.graph)
 
     def draw_computation(self, save_path: str | None = None) -> graphviz.Digraph:
         """The full bipartite graph, drawn flat (no clustering)."""
-        dot = self._new_digraph("computation")
-        for node_id, node in self.graph.nodes.items():
-            self._add_node(dot, node_id, node)
-        self._add_edges(dot, self.graph)
-        return self._render(dot, save_path)
+        return self._draw_flat("computation", self.graph, save_path)
 
     def draw_combined(self, save_path: str | None = None) -> graphviz.Digraph:
-        """The full graph with each layer scope wrapped in a cluster box, nested to mirror the module hierarchy."""
-        dot = self._new_digraph("combined")
+        """The full graph with each layer scope wrapped in a cluster box, nested to
+        mirror the module hierarchy. Modules marked collapse=True are drawn as one
+        box, hiding their internals but keeping their place in the hierarchy."""
+        graph = self._marked_collapsed()
 
-        ungrouped, tree = self._build_scope_tree()
+        dot = self._new_digraph("combined")
+        ungrouped, tree = self._build_scope_tree(graph)
         for node_id, node in ungrouped:
             self._add_node(dot, node_id, node)
         self._add_scope_clusters(dot, tree, [])
-
-        self._add_edges(dot, self.graph)
+        self._add_edges(dot, graph)
         return self._render(dot, save_path)
 
     def draw_architecture(self, save_path: str | None = None) -> graphviz.Digraph:
-        """Each layer scope collapsed to one box, edges labelled with the
+        """Every layer scope collapsed to one box, edges labelled with the
         shape of the tensor crossing between layers."""
-        scopes = {n.scope for n in self.graph.nodes.values() if n.scope is not None}
-        collapsed = self._collapse(scopes)
+        every_scope = {
+            n.scope for n in self.graph.nodes.values() if n.scope is not None
+        }
+        return self._draw_flat(
+            "architecture", self._collapse(self.graph, every_scope), save_path
+        )
 
-        dot = self._new_digraph("architecture")
-        for node_id, node in collapsed.nodes.items():
+    def _draw_flat(
+        self, name: str, graph: Graph, save_path: str | None
+    ) -> graphviz.Digraph:
+        """Render every node at the top level, no clustering. Shared by the
+        computation and architecture views, which differ only in their graph."""
+        dot = self._new_digraph(name)
+        for node_id, node in graph.nodes.items():
             self._add_node(dot, node_id, node)
-        self._add_edges(dot, collapsed)
+        self._add_edges(dot, graph)
         return self._render(dot, save_path)
+
+    def _marked_collapsed(self) -> Graph:
+        """The graph with only the collapse=True scopes folded, descendants included."""
+        if not self.collapsed_scopes:
+            return self.graph
+        return self._collapse(
+            self.graph, self.collapsed_scopes, descendants=True, nest=True
+        )
 
     def _walk(self, item: Tensor | Op, visited: set[int], graph: Graph):
         """
@@ -178,21 +151,16 @@ class GraphVisualizer:
     def _new_digraph(self, name: str) -> graphviz.Digraph:
         return graphviz.Digraph(
             name,
-            graph_attr=_GRAPH_ATTR,
-            node_attr=_NODE_ATTR,
-            edge_attr=_EDGE_ATTR,
+            graph_attr=_theme.GRAPH_ATTR,
+            node_attr=_theme.NODE_ATTR,
+            edge_attr=_theme.EDGE_ATTR,
         )
 
     def _add_node(self, target: graphviz.Digraph, node_id: int, node: Node) -> None:
-        shape, fill, font = _NODE_STYLE.get(node.kind, _DEFAULT_STYLE)
-        style = "filled,rounded" if shape == "box" else "filled"
         label = node.label
         if node.shape is not None:
             label = f"{node.label}\n({_format_shape(node.shape)})"
-        attrs = {"shape": shape, "style": style, "fillcolor": fill, "fontcolor": font}
-        if node.scope:  # align a layer's nodes into a column
-            attrs["group"] = node.scope
-        target.node(str(node_id), label, **attrs)
+        target.node(str(node_id), label, **_theme.node_attrs(node.kind, node.scope))
 
     def _add_edges(self, dot: graphviz.Digraph, graph: Graph) -> None:
         for edge in graph.edges:
@@ -204,48 +172,105 @@ class GraphVisualizer:
                 style="dashed" if into_op else "solid",
             )
 
-    def _collapse(self, scopes: set[str]) -> Graph:
+    def _box_scope(self, scope: str, scopes: set[str], descendants: bool) -> str | None:
+        """The marked scope that swallows `scope`, or None if it survives intact.
+
+        With `descendants`, a marked scope also claims everything nested beneath it,
+        and the outermost claimant wins — so collapsing a Residual hides its whole
+        block rather than fighting with a collapsed layer inside it.
+        """
+        if scope in scopes:
+            return scope
+        if not descendants:
+            return None
+        enclosing = [s for s in scopes if scope.startswith(s + "/")]
+        return min(enclosing, key=len) if enclosing else None
+
+    def _collapse(
+        self,
+        graph: Graph,
+        scopes: set[str],
+        *,
+        descendants: bool = False,
+        nest: bool = False,
+    ) -> Graph:
         """Fold every node in a collapsed scope into one box node, rerouting
         edges across the boundary and dropping edges internal to a scope.
-
-        Each surviving edge keeps the crossing tensor's shape as its label: in
-        the bipartite graph a cross-scope edge always runs tensor -> op, so the
-        source's shape is the data flowing between layers.
         """
-        rep: dict[int, int] = {}
+        nodes, rep = self._fold_nodes(graph, scopes, descendants, nest)
+        return Graph(nodes=nodes, edges=self._reroute_edges(graph, rep))
+
+    def _fold_nodes(
+        self, graph: Graph, scopes: set[str], descendants: bool, nest: bool
+    ) -> tuple[dict[int, Node], dict[int, int]]:
+        """Map every node to what survives it: its scope's box, or itself.
+
+        Returns the surviving nodes and `rep`, the old-id -> surviving-id map that
+        _reroute_edges needs to redirect the edges.
+        """
         nodes: dict[int, Node] = {}
+        rep: dict[int, int] = {}
         box_ids: dict[str, int] = {}
 
-        for node_id, node in self.graph.nodes.items():
-            scope = node.scope
-            if scope is not None and scope in scopes:
-                if scope not in box_ids:
-                    box_ids[scope] = -len(box_ids) - 1  # negative: never an id()
-                    nodes[box_ids[scope]] = Node(
-                        kind=NodeKind.LAYER_OUTPUT, label=scope, shape=None, scope=None
-                    )
-                rep[node_id] = box_ids[scope]
-            else:
+        for node_id, node in graph.nodes.items():
+            box = (
+                self._box_scope(node.scope, scopes, descendants)
+                if node.scope is not None
+                else None
+            )
+            if box is None:
                 rep[node_id] = node_id
                 nodes[node_id] = node
+                continue
+            if box not in box_ids:
+                box_ids[box] = -len(box_ids) - 1  # negative: never an id()
+                nodes[box_ids[box]] = self._make_box(box, nest)
+            rep[node_id] = box_ids[box]
 
+        return nodes, rep
+
+    def _make_box(self, scope: str, nest: bool) -> Node:
+        """The single node standing in for a collapsed scope.
+
+        `nest` hands the box its parent's scope so the combined view clusters it
+        where the module sat; the architecture view wants it free-standing, and
+        labels it with the full path since it has no cluster for context.
+        """
+        parent, _, leaf = scope.rpartition("/")
+        return Node(
+            kind=NodeKind.LAYER_OUTPUT,
+            label=leaf if nest else scope,
+            shape=None,
+            scope=(parent or None) if nest else None,
+        )
+
+    def _reroute_edges(self, graph: Graph, rep: dict[int, int]) -> set[Edge]:
+        """Redirect edges onto surviving nodes, dropping those that end up inside
+        a single box.
+
+        Each survivor keeps the crossing tensor's shape as its label: in the
+        bipartite graph a cross-scope edge always runs tensor -> op, so the
+        source's shape is the data flowing between layers.
+        """
         edges: set[Edge] = set()
-        for edge in self.graph.edges:
+        for edge in graph.edges:
             source, target = rep[edge.source], rep[edge.target]
             if source == target:
-                continue  # edge internal to a collapsed scope
-            crossing = self.graph.nodes[edge.source].shape
+                continue  # both ends folded into the same box: internal, drop it
+            crossing = graph.nodes[edge.source].shape
             label = _format_shape(crossing) if crossing is not None else None
             edges.add(Edge(source, target, label=label))
+        return edges
 
-        return Graph(nodes=nodes, edges=edges)
-
-    def _build_scope_tree(self) -> tuple[list[tuple[int, Node]], _ScopeTree]:
+    def _build_scope_tree(
+        self, graph: Graph | None = None
+    ) -> tuple[list[tuple[int, Node]], _ScopeTree]:
         """Split each node's slash-delimited scope into a nested tree. Nodes with
         no scope are returned separately to sit ungrouped at the top level."""
+        graph = self.graph if graph is None else graph
         ungrouped: list[tuple[int, Node]] = []
         root = _ScopeTree()
-        for node_id, node in self.graph.nodes.items():
+        for node_id, node in graph.nodes.items():
             if node.scope is None:
                 ungrouped.append((node_id, node))
                 continue
@@ -263,29 +288,11 @@ class GraphVisualizer:
         for segment, subtree in tree.children.items():
             full_path = path + [segment]
             cluster = graphviz.Digraph(name="cluster_" + "/".join(full_path))
-            self._style_cluster(cluster, segment, "/".join(full_path))
+            _theme.style_cluster(cluster, segment, "/".join(full_path))
             for node_id, node in subtree.nodes:
                 self._add_node(cluster, node_id, node)
             self._add_scope_clusters(cluster, subtree, full_path)
             parent.subgraph(cluster)
-
-    def _style_cluster(
-        self, cluster: graphviz.Digraph, label: str, path_key: str
-    ) -> None:
-        index = zlib.crc32(path_key.encode()) % len(_CLUSTER_PALETTE)
-        fill, border = _CLUSTER_PALETTE[index]
-        cluster.attr(
-            label=label,
-            labelloc="t",
-            style="rounded,filled",
-            color=border,
-            fillcolor=fill,
-            fontname="Helvetica",
-            fontcolor="#495057",
-            fontsize="12",
-            penwidth="1.4",
-            margin="14",
-        )
 
     def _render(self, dot: graphviz.Digraph, save_path: str | None) -> graphviz.Digraph:
         """Save to save_path when given. Always return the dot so notebooks
