@@ -31,3 +31,22 @@ The generator is deterministic (fixed seed). Radii are area-weighted so points
 spread evenly across each ring, with small Gaussian jitter on each coordinate.
 Used by `notebooks/phase7_residual_networks.ipynb`, which trains on a slice of
 the rows to keep the pure-Python run to a couple of minutes.
+
+## `magic_gamma_telescope.csv`
+
+Binary classification from the MAGIC Cherenkov telescope. Monte-Carlo-simulated
+particle showers described by their "image" ellipse (Hillas parameters); the
+task is to separate gamma-ray signal from hadronic cosmic-ray background. Larger
+and genuinely harder than iris — the classes overlap, so hyperparameters visibly
+affect the validation curve instead of everything converging to the ceiling.
+
+- Rows: 19020 examples (12332 gamma `g`, 6688 hadron `h`)
+- Inputs: `fLength`, `fWidth`, `fSize`, `fConc`, `fConc1`, `fAsym`, `fM3Long`,
+  `fM3Trans`, `fAlpha`, `fDist` (all continuous Hillas parameters)
+- Target: `class` (`g` = gamma / signal, `h` = hadron / background)
+- Source: UCI Machine Learning Repository MAGIC Gamma Telescope data file
+  (`https://archive.ics.uci.edu/ml/machine-learning-databases/magic/magic04.data`),
+  with a header row added to match the other CSVs.
+
+Note the ~65/35 class imbalance: a model that always predicts `g` scores ~65%
+accuracy, so watch per-class performance, not just overall accuracy.
