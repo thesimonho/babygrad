@@ -1,4 +1,5 @@
-from babygrad.nn.modules import BatchNorm, Linear, Model, Residual, Sequential
+from babygrad.nn.model import Model
+from babygrad.nn.modules import BatchNorm, Linear, Residual, Sequential
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
 

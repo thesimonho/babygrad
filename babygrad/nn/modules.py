@@ -7,36 +7,6 @@ from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
 
 
-class Model:
-    def __init__(self, root: Module):
-        self.root = root
-        self.stamp_name_and_scope(self.root)
-
-    def eval(self, x: Tensor) -> Tensor:
-        """
-        Use for forward pass inference, not training.
-        """
-        with bound(_is_training, False):
-            return self.root.forward(x)
-
-    def forward(self, x: Tensor) -> Tensor:
-        with bound(_is_training, True):
-            return self.root.forward(x)
-
-    def stamp_name_and_scope(self, root: Module, prefix: str = "", idx: int = 0):
-        """
-        Set the name and scope of all descendent Modules and their children
-        """
-        root.name = f"{prefix + '/' if prefix else ''}{root.name}_{idx}"
-
-        for idx, c in enumerate(root.children()):
-            self.stamp_name_and_scope(c, root.name, idx)
-
-        for idx, p in enumerate(root.own_parameters()):
-            p.scope = root.name
-            p.name = f"{root.name.split('/')[-1]}/{p.name}"
-
-
 class Module(ABC):
     """
     Layer outputs compose via op Nodes, which give them backprop data
