@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from babygrad.nn.modules import Module
     from babygrad.tensor import Tensor
     from babygrad.tracing import Traceable
 
@@ -41,3 +44,24 @@ class Tracer:
     def exit(self, module: Traceable, output: Tensor) -> None:
         entered, inputs, outer = self._open.pop()
         self.records.append(TraceRecord(entered, inputs, output, outer))
+
+    def verify_covers(self, root: Module) -> None:
+        """Raise if any module in ``root``'s static tree went unbracketed this
+        trace — the signature of a ``.forward()`` call site that was not converted
+        to call syntax, which would silently fold that module's ops into its
+        parent's scope instead of giving it its own."""
+        bracketed = {id(record.module) for record in self.records}
+        missing = [m for m in _walk_modules(root) if id(m) not in bracketed]
+        if missing:
+            names = ", ".join(type(m).__name__ for m in missing)
+            raise RuntimeError(
+                f"tracer did not bracket: {names}. A module .forward() call site "
+                "was not converted to call syntax."
+            )
+
+
+def _walk_modules(root: Module) -> Iterator[Module]:
+    """Yield ``root`` and every module nested beneath it (its static tree)."""
+    yield root
+    for child in root.children():
+        yield from _walk_modules(child)

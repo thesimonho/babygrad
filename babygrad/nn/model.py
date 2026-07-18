@@ -47,11 +47,11 @@ class Model:
         Use for forward pass inference, not training.
         """
         with bound(_is_training, False):
-            return self.root.forward(x)
+            return self.root(x)
 
     def forward(self, x: Tensor) -> Tensor:
         with bound(_is_training, True):
-            return self.root.forward(x)
+            return self.root(x)
 
     def stamp_name_and_scope(self, root: Module, prefix: str = "", idx: int = 0):
         """
@@ -117,7 +117,7 @@ class Trainer:
         self.config.optimizer.zero_grad()
         pred_train = self.model.forward(x_train)
         with bound(_is_training, True):
-            loss_tensor = self.config.criterion.forward(y_train, pred_train)
+            loss_tensor = self.config.criterion(y_train, pred_train)
 
         loss_tensor.backward()
         self.config.optimizer.step()
@@ -141,7 +141,7 @@ class Trainer:
         x, y = DataLoader(split).full_batch()
         pred = self.model.eval(x)
         with bound(_is_training, False):
-            loss = self.config.criterion.forward(y, pred)
+            loss = self.config.criterion(y, pred)
 
         metrics_output = {}
         if self.config.metrics is not None:

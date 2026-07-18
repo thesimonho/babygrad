@@ -64,7 +64,7 @@ class Sequential(Module):
 
         for layer in self.layers:
             with bound(_scope, layer.name):
-                input = layer.forward(input)
+                input = layer(input)
 
             # a named layer boundary: a more specific role than OP_RESULT
             input.name = f"{layer.name.split('/')[-1]}/result"
@@ -144,7 +144,7 @@ class Residual(Module):
         return [self.block]
 
     def forward(self, input: Tensor) -> Tensor:
-        output = self.block.forward(input)
+        output = self.block(input)
         return input + output
 
 
