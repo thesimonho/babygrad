@@ -128,6 +128,10 @@ def test_fit_records_one_epoch_mean_per_epoch_without_lifetime_drift():
     assert len(recorder.history["loss"]) == epochs
     assert len(recorder.history["val_loss"]) == epochs
 
+    # the fit path also captures the last batch's params/grads through the reporter's
+    # per-batch tracer -> end_epoch capture; guard that wiring, not just record()
+    assert "Linear_0/weights/grad" in recorder.history
+
     # accumulators reset each epoch: the final epoch's recorded mean is its lone
     # batch's loss, i.e. the returned tensor. Lifetime drift would break this.
     last_epoch = epochs - 1
