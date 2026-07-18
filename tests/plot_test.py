@@ -6,7 +6,7 @@ from babygrad.types import History
 from babygrad.nn.activations import ReLU
 from babygrad.nn.model import Model
 from babygrad.nn.modules import Linear, Sequential
-from babygrad.recorder import Recorder
+from babygrad.observers import Recorder
 from babygrad.viz.plot import PlotVisualizer, _bin_counts
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind

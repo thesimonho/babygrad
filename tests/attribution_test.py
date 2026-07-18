@@ -4,7 +4,7 @@ from babygrad.tensor import Tensor
 from babygrad.tracing import tracing
 from babygrad.types import NodeKind
 from babygrad.viz.attribution import attribute
-from babygrad.viz.tracer import Tracer
+from babygrad.observers import Tracer
 
 
 def _trace(root):

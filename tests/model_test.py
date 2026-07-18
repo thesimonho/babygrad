@@ -6,7 +6,7 @@ from babygrad.nn.model import Model, TrainConfig, Trainer
 from babygrad.nn.modules import BatchNorm, Linear, Residual, Sequential
 from babygrad.nn.optimizers import SGD
 from babygrad.nn.schedulers import ConstantLR
-from babygrad.recorder import Recorder
+from babygrad.observers import Recorder
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
 

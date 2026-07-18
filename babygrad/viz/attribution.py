@@ -20,8 +20,8 @@ from babygrad.tensor import Tensor
 from babygrad.types import Scope
 
 if TYPE_CHECKING:
+    from babygrad.observers import TraceRecord
     from babygrad.tracing import Traceable
-    from babygrad.viz.tracer import TraceRecord
 
 
 @dataclass

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, DefaultDict
 from tqdm import tqdm
 
 from babygrad.data import DataLoader
-from babygrad.recorder import Recorder
+from babygrad.observers import Recorder
 from babygrad.state import _is_training, bound
 from babygrad.tensor import Tensor
 from babygrad.types import Number, Scope

@@ -5,7 +5,7 @@ from babygrad.nn.modules import Linear, Residual, Sequential
 from babygrad.tensor import Tensor
 from babygrad.tracing import tracing
 from babygrad.types import NodeKind
-from babygrad.viz.tracer import Tracer
+from babygrad.observers import Tracer
 
 
 def test_call_brackets_forward_into_the_active_tracer():
