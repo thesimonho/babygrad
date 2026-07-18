@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from babygrad.data import CSVDataset, split_train_val_test
+from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import Accuracy
 from babygrad.nn.activations import ReLU, Softmax
 from babygrad.nn.losses import CCE
@@ -16,7 +16,9 @@ from babygrad.nn.modules import (
 )
 from babygrad.nn.optimizers import SGD, Adam
 from babygrad.nn.schedulers import ConstantLR, CosineAnnealingLR
-from babygrad.recorder import Recorder
+from babygrad.observers import Recorder, Tracer
+from babygrad.tracing import tracing
+from babygrad.viz.attribution import attribute
 from babygrad.viz.graph import GraphVisualizer
 from babygrad.viz.plot import PlotVisualizer
 
@@ -57,8 +59,13 @@ def train_iris():
     trainer.test(test)
 
     if train_loss is not None:
-        collapsed_scopes = model.collapsed_scopes | config.criterion.collapsed_scopes
-        visualizer = GraphVisualizer(train_loss, collapsed_scopes)
+        # Trace a fresh forward: the fit() loss carries no scope attribution, so
+        # re-run one batch under a tracer to feed the graph views.
+        demo_x, demo_y = DataLoader(train, batch_size=config.batch_size).full_batch()
+        tracer = Tracer()
+        with tracing(tracer):
+            loss = config.criterion(demo_y, model.forward(demo_x))
+        visualizer = GraphVisualizer(loss, attribute(tracer.records))
         visualizer.draw_architecture(save_path="./plots/architecture.svg")
         visualizer.draw_computation(save_path="./plots/computation.svg")
         visualizer.draw_combined(save_path="./plots/combined.svg")
