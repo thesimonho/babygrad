@@ -1,8 +1,9 @@
 """The two observers of a model run.
 
 - ``Tracer`` watches module/loss brackets during a forward pass, collecting the
-  raw ``(module, inputs, output)`` records that ``attribution`` turns into the
-  scope tree and node->scope map. It is fed through the ``__call__`` bracket seam.
+  raw ``(module, inputs, output)`` records. ``build_scope_tree`` turns those
+  records into a labelled scope tree (record-only, no graph walk); ``attribution``
+  adds the graph-walking node->scope map on top for the graph views.
 - ``Recorder`` collects the tagged time-series of values — parameter and
   layer-output data and gradients — across training steps.
 
@@ -16,7 +17,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from babygrad.types import History, HistoryValue, NodeKind, Step, Tag
+from babygrad.types import History, HistoryValue, NodeKind, Scope, Step, Tag
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -80,9 +81,53 @@ def _walk_modules(root: Module) -> Iterator[Module]:
         yield from _walk_modules(child)
 
 
-# --- Recorder: values over time ---------------------------------------------
+def build_scope_tree(records: list[TraceRecord]) -> dict[int, Scope]:
+    """One Scope per bracketed module, keyed by ``id(module)``, linked to its
+    outer scope. Sibling indices come from exit order, which visits siblings in
+    declaration order; ids are full paths so they stay unique and readable.
 
-_RECORDABLE = {NodeKind.PARAMETER, NodeKind.LAYER_OUTPUT}
+    Derived from the records alone — no autograd graph walk — so both the recorder
+    (labels for its value tags) and the graph attribution (as the tree the node
+    walk hangs off) can share it. Lives here, with the Tracer, so recording values
+    never has to reach into the graphing layer.
+    """
+    labels: dict[int, str] = {}
+    outers: dict[int, Traceable | None] = {}
+    counts: dict[int | None, int] = {}
+    for record in records:
+        outer_key = id(record.outer) if record.outer is not None else None
+        index = counts.get(outer_key, 0)
+        counts[outer_key] = index + 1
+        labels[id(record.module)] = f"{type(record.module).__name__}_{index}"
+        outers[id(record.module)] = record.outer
+
+    scopes: dict[int, Scope] = {}
+
+    def resolve(module: Traceable) -> Scope:
+        existing = scopes.get(id(module))
+        if existing is not None:
+            return existing
+        label = labels[id(module)]
+        outer = outers[id(module)]
+        if outer is None:
+            scope = Scope(id=label, label=label, outer_scope=None, collapsed=module.collapse)
+        else:
+            outer_scope = resolve(outer)
+            scope = Scope(
+                id=f"{outer_scope.id}/{label}",
+                label=label,
+                outer_scope=outer_scope.id,
+                collapsed=module.collapse,
+            )
+        scopes[id(module)] = scope
+        return scope
+
+    for record in records:
+        resolve(record.module)
+    return scopes
+
+
+# --- Recorder: values over time ---------------------------------------------
 
 
 class Recorder:
@@ -95,32 +140,53 @@ class Recorder:
     def record(self, tag: Tag, value: HistoryValue):
         self.history[tag][self.step] = value
 
-    def capture(self, root: Tensor):
-        """Walk the graph backward from `root`, recording recordable nodes.
+    def capture(self, tracer: Tracer) -> None:
+        """Record parameter and layer-output values from a traced forward.
 
-        A node is recordable by its kind (parameters and layer outputs), not
-        by whether it happens to have a name. Each contributes two tags: its
-        data under its name and its gradient under "<name>/grad". Values are
-        copied because parameters mutate in place and gradients are zeroed
-        between steps.
+        Consumes the tracer's records instead of walking the graph: the scope tree
+        gives each module its label, and each record hands over the module (for its
+        parameters) and its output tensor directly. Tensors are deduped by identity
+        in exit order, so a container whose output *is* its child's output does not
+        re-tag it under the container's name — the producing leaf claims it first.
 
-        Coverage is bounded by ancestry — only tensors that contributed to
-        `root` are reachable, so capturing from the loss sees everything.
-        Gradients are only meaningful when called after backward() and
-        before the next zero_grad().
+        Each recorded tensor contributes its data under "<label>/<role>" and its
+        gradient under "<label>/<role>/grad". Values are copied because parameters
+        mutate in place and gradients are zeroed between steps; call after
+        backward() and before the next zero_grad() for gradients to be meaningful.
         """
-        visited: set[int] = set()
-        self._capture_walk(root, visited)
+        tree = build_scope_tree(tracer.records)
+        recorded: set[int] = set()
+        for record in tracer.records:
+            label = tree[id(record.module)].label
+            self._record_parameters(record.module, label, recorded)
+            self._record_output(record.output, label, recorded)
 
-    def _capture_walk(self, tensor: Tensor, visited: set[int]):
-        if id(tensor) in visited:
+    def _record_parameters(
+        self, module: Traceable, label: str, recorded: set[int]
+    ) -> None:
+        """Record each of the module's own parameters as "<label>/<role>", where
+        role is the parameter's own name (its scope prefix, if any, is dropped)."""
+        own_parameters = getattr(module, "own_parameters", None)
+        if own_parameters is None:
             return
-        visited.add(id(tensor))
+        for param in own_parameters():
+            if id(param) in recorded:
+                continue
+            recorded.add(id(param))
+            role = param.name.split("/")[-1] if param.name else "parameter"
+            self._record_series(f"{label}/{role}", param)
 
-        if tensor.kind in _RECORDABLE and tensor.name is not None:
-            self.record(tensor.name, list(tensor.data))
-            self.record(f"{tensor.name}/grad", list(tensor.grad))
+    def _record_output(self, output: Tensor, label: str, recorded: set[int]) -> None:
+        """Record a module's output as "<label>/result", but only a real layer
+        boundary — the loss output is not one, and a container's output was already
+        claimed by the leaf that produced it."""
+        if output.kind is not NodeKind.LAYER_OUTPUT:
+            return
+        if id(output) in recorded:
+            return
+        recorded.add(id(output))
+        self._record_series(f"{label}/result", output)
 
-        if tensor.producer is not None:
-            for parent in tensor.producer.inputs:
-                self._capture_walk(parent, visited)
+    def _record_series(self, tag: Tag, tensor: Tensor) -> None:
+        self.record(tag, list(tensor.data))
+        self.record(f"{tag}/grad", list(tensor.grad))

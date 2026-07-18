@@ -6,10 +6,20 @@ from babygrad.types import History
 from babygrad.nn.activations import ReLU
 from babygrad.nn.model import Model
 from babygrad.nn.modules import Linear, Sequential
-from babygrad.observers import Recorder
+from babygrad.observers import Recorder, Tracer
+from babygrad.tracing import tracing
 from babygrad.viz.plot import PlotVisualizer, _bin_counts
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
+
+
+def _trace_forward(model: Model, x: Tensor) -> tuple[Tensor, Tracer]:
+    """Run a forward pass under a tracer, returning its output and the tracer whose
+    records the recorder consumes — the dance a training loop performs each batch."""
+    tracer = Tracer()
+    with tracing(tracer):
+        output = model.forward(x)
+    return output, tracer
 
 
 SCALAR_HISTORY: History = {"loss": {0: 1.5, 1: 1.2, 2: 0.9}}
@@ -68,16 +78,23 @@ def test_capture_records_named_tensors():
     x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
 
     recorder.step = 0
-    output = model.forward(x)
-    recorder.capture(output)
+    _, tracer = _trace_forward(model, x)
+    recorder.capture(tracer)
 
     assert "Linear_0/weights" in recorder.history
     assert "Linear_0/bias" in recorder.history
     assert "Linear_0/result" in recorder.history
     # every layer boundary is named now, parameterless layers included
     assert "ReLU_1/result" in recorder.history
-    # anonymous tensors (the input batch) contribute nothing
-    assert len([tag for tag in recorder.history if "/" not in tag]) == 0
+    # exactly these value tags: the container's output is ReLU's output, already
+    # claimed, so it must NOT reappear as Sequential_0/result (the double-tag trap)
+    data_tags = {tag for tag in recorder.history if not tag.endswith("/grad")}
+    assert data_tags == {
+        "Linear_0/weights",
+        "Linear_0/bias",
+        "Linear_0/result",
+        "ReLU_1/result",
+    }
 
 
 def test_captured_weights_are_snapshots():
@@ -87,10 +104,12 @@ def test_captured_weights_are_snapshots():
     x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
 
     recorder.step = 0
-    recorder.capture(model.forward(x))
+    _, tracer = _trace_forward(model, x)
+    recorder.capture(tracer)
     layer.weights.data[0] += 100.0
     recorder.step = 1
-    recorder.capture(model.forward(x))
+    _, tracer = _trace_forward(model, x)
+    recorder.capture(tracer)
 
     recorded = recorder.history["Linear_0/weights"]
     before, after = recorded[0], recorded[1]
@@ -114,11 +133,11 @@ def test_capture_records_grads():
     model = Model(Sequential([layer]))
     x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
 
-    output = model.forward(x)
+    output, tracer = _trace_forward(model, x)
     output.sum().backward()
 
     recorder.step = 0
-    recorder.capture(output)
+    recorder.capture(tracer)
 
     assert "Linear_0/weights/grad" in recorder.history
     recorded = recorder.history["Linear_0/weights/grad"][0]
@@ -131,11 +150,11 @@ def test_captured_grads_survive_zero_grad():
     layer = Linear(2, 3)
     model = Model(Sequential([layer]))
     x = Tensor([1.0, 2.0], shape=(1, 2), kind=NodeKind.VIEW)
-    output = model.forward(x)
+    _, tracer = _trace_forward(model, x)
     layer.weights.grad[0] = 7.0
 
     recorder.step = 0
-    recorder.capture(output)
+    recorder.capture(tracer)
     layer.weights.grad[0] = 0.0  # what zero_grad() does, in place
 
     recorded = recorder.history["Linear_0/weights/grad"][0]

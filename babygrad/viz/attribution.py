@@ -1,13 +1,11 @@
-"""Turn a tracer's bracket records into the two graphing outputs:
+"""Turn a tracer's bracket records into the graphing node->scope map.
 
-- the **scope tree**, from bracket *nesting* (so empty containers survive), and
-- the **node->scope map**, from attributing each op to the innermost module whose
-  forward produced it.
-
-Structure and attribution are deliberately separate: the tree comes from who
-bracketed whom, the map from walking the autograd graph. Building the tree from
-attribution alone would drop pass-through containers, whose output is their
-child's output and which therefore claim no ops of their own.
+The scope tree itself comes from ``observers.build_scope_tree`` (record-only, no
+graph walk); this module adds the graph-walking half — attributing each op to the
+innermost module whose forward produced it. The two are deliberately separate: the
+tree comes from who bracketed whom, the map from walking the autograd graph.
+Building the tree from attribution alone would drop pass-through containers, whose
+output is their child's output and which therefore claim no ops of their own.
 """
 
 from __future__ import annotations
@@ -15,6 +13,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from babygrad.observers import build_scope_tree
 from babygrad.ops import Op
 from babygrad.tensor import Tensor
 from babygrad.types import Scope
@@ -39,52 +38,12 @@ class TraceResult:
 
 def attribute(records: list[TraceRecord]) -> TraceResult:
     """Derive the scope tree and node->scope map from a tracer's records."""
-    by_module = _build_scope_tree(records)
+    by_module = build_scope_tree(records)
     node_scope = _attribute_nodes(records, by_module)
     return TraceResult(
         scopes={scope.id: scope for scope in by_module.values()},
         node_scope=node_scope,
     )
-
-
-def _build_scope_tree(records: list[TraceRecord]) -> dict[int, Scope]:
-    """One Scope per bracketed module, keyed by ``id(module)``, linked to its
-    outer scope. Sibling indices come from exit order, which visits siblings in
-    declaration order; ids are full paths so they stay unique and readable."""
-    labels: dict[int, str] = {}
-    outers: dict[int, Traceable | None] = {}
-    counts: dict[int | None, int] = {}
-    for record in records:
-        outer_key = id(record.outer) if record.outer is not None else None
-        index = counts.get(outer_key, 0)
-        counts[outer_key] = index + 1
-        labels[id(record.module)] = f"{type(record.module).__name__}_{index}"
-        outers[id(record.module)] = record.outer
-
-    scopes: dict[int, Scope] = {}
-
-    def resolve(module: Traceable) -> Scope:
-        existing = scopes.get(id(module))
-        if existing is not None:
-            return existing
-        label = labels[id(module)]
-        outer = outers[id(module)]
-        if outer is None:
-            scope = Scope(id=label, label=label, outer_scope=None, collapsed=module.collapse)
-        else:
-            outer_scope = resolve(outer)
-            scope = Scope(
-                id=f"{outer_scope.id}/{label}",
-                label=label,
-                outer_scope=outer_scope.id,
-                collapsed=module.collapse,
-            )
-        scopes[id(module)] = scope
-        return scope
-
-    for record in records:
-        resolve(record.module)
-    return scopes
 
 
 def _attribute_nodes(

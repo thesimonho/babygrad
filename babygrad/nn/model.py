@@ -1,4 +1,5 @@
 from collections import defaultdict
+from contextlib import nullcontext
 from dataclasses import dataclass
 from math import ceil
 from typing import TYPE_CHECKING, DefaultDict
@@ -6,9 +7,10 @@ from typing import TYPE_CHECKING, DefaultDict
 from tqdm import tqdm
 
 from babygrad.data import DataLoader
-from babygrad.observers import Recorder
+from babygrad.observers import Recorder, Tracer
 from babygrad.state import _is_training, bound
 from babygrad.tensor import Tensor
+from babygrad.tracing import tracing
 from babygrad.types import Number, Scope
 
 if TYPE_CHECKING:
@@ -100,8 +102,10 @@ class Trainer:
             # training
             batches = DataLoader(train, self.config.batch_size)
             for x_train, y_train in batches:
-                pred_train, train_loss_tensor = self._train_one_batch(x_train, y_train)
-                reporter.on_batch(y_train, pred_train, train_loss_tensor)
+                pred_train, train_loss_tensor, tracer = self._train_one_batch(
+                    x_train, y_train
+                )
+                reporter.on_batch(y_train, pred_train, train_loss_tensor, tracer)
 
             # validation
             validation_loss_value, _ = self.evaluate(val)
@@ -113,16 +117,22 @@ class Trainer:
 
     def _train_one_batch(
         self, x_train: Tensor, y_train: Tensor
-    ) -> tuple[Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, Tracer | None]:
+        # Trace the forward only when a recorder is watching, so the tracer can
+        # hand it the batch's parameters and layer outputs to capture. No recorder
+        # -> no tracer -> the bracket seam stays a zero-cost passthrough.
+        tracer = Tracer() if self.recorder is not None else None
+
         self.config.optimizer.zero_grad()
-        pred_train = self.model.forward(x_train)
-        with bound(_is_training, True):
-            loss_tensor = self.config.criterion(y_train, pred_train)
+        with tracing(tracer) if tracer is not None else nullcontext():
+            pred_train = self.model.forward(x_train)
+            with bound(_is_training, True):
+                loss_tensor = self.config.criterion(y_train, pred_train)
 
         loss_tensor.backward()
         self.config.optimizer.step()
 
-        return pred_train, loss_tensor
+        return pred_train, loss_tensor, tracer
 
     def test(self, test: DataSplit) -> None:
         """
@@ -159,6 +169,9 @@ class TrainingReporter:
         self.accum_loss: list[Number] = []
         self.epoch_metrics: DefaultDict[str, list[Number]] = defaultdict(list)
         self.loss_tensor: Tensor | None = None
+        # tracer of the last batch's forward, whose recordable tensors the recorder
+        # captures at epoch end; None when no recorder is attached
+        self.tracer: Tracer | None = None
 
         self.progress_epoch = tqdm(
             total=self.config.epochs, desc="train (epochs)", leave=True, position=0
@@ -173,6 +186,7 @@ class TrainingReporter:
     def start_epoch(self, epoch: int) -> None:
         self.progress_batch.reset()
         self.loss_tensor = None
+        self.tracer = None
         self.batch_sizes = []
         self.accum_loss = []
         self.epoch_metrics: DefaultDict[str, list[Number]] = defaultdict(list)
@@ -181,8 +195,11 @@ class TrainingReporter:
             return
         self.recorder.step = epoch
 
-    def on_batch(self, y: Tensor, pred: Tensor, loss: Tensor) -> None:
+    def on_batch(
+        self, y: Tensor, pred: Tensor, loss: Tensor, tracer: Tracer | None
+    ) -> None:
         self.loss_tensor = loss
+        self.tracer = tracer
         self.batch_sizes.append(y.nrow)
         self.accum_loss.append(loss.data[0])
 
@@ -203,8 +220,8 @@ class TrainingReporter:
         if self.recorder is None:
             return
 
-        if self.loss_tensor is not None:
-            self.recorder.capture(root=self.loss_tensor)
+        if self.tracer is not None:
+            self.recorder.capture(self.tracer)
         self.recorder.record("loss", self._batch_weighted_mean(self.accum_loss))
         self.recorder.record("val_loss", validation_loss_value)
         if self.config.metrics is not None:
