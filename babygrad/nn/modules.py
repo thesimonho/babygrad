@@ -1,13 +1,14 @@
 import random
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 from babygrad.nn.initializers import Glorot, WeightInitializer
 from babygrad.state import _is_training, _scope, bound
 from babygrad.tensor import Tensor
+from babygrad.tracing import Traceable
 from babygrad.types import NodeKind
 
 
-class Module(ABC):
+class Module(Traceable):
     """
     Layer outputs compose via op Nodes, which give them backprop data
     and edge data for the graph

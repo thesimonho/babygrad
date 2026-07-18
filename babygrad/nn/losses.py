@@ -1,11 +1,12 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
 from babygrad.state import bound, _scope, _is_training
+from babygrad.tracing import Traceable
 
 
-class Loss(ABC):
+class Loss(Traceable):
     """Base for loss functions.
 
     forward() is the funnel: it stamps the supervision target and the loss
