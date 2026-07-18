@@ -53,8 +53,12 @@ class Traceable(ABC):
 
     ``forward`` is declared as a permissive callable rather than a fixed-arity
     abstract method so subclasses can keep their own signatures — ``Module`` takes
-    one input, ``Loss`` takes two. Each enforces its own abstractness."""
+    one input, ``Loss`` takes two. Each enforces its own abstractness.
 
+    ``collapse`` is a display hint (draw this whole scope as one box) that both
+    Modules and Losses carry; the tracer reads it onto the scope."""
+
+    collapse: bool
     forward: Callable[..., Tensor]
 
     def __call__(self, *inputs: Tensor) -> Tensor:
