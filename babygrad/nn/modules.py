@@ -2,7 +2,7 @@ import random
 from abc import abstractmethod
 
 from babygrad.nn.initializers import Glorot, WeightInitializer
-from babygrad.state import _is_training, _scope, bound
+from babygrad.state import _is_training
 from babygrad.tensor import Tensor
 from babygrad.tracing import Traceable
 from babygrad.types import NodeKind
@@ -17,8 +17,8 @@ class Module(Traceable):
     def __init__(self, collapse: bool = False):
         # bare type name by default; Sequential re-stamps it with an index
         self.name = type(self).__name__
-        # draw this module as a single box, hiding its internals. Model.stamp_name_and_scope
-        # reads it once the name is fully qualified; the graph only ever sees the scope string.
+        # draw this module as a single box, hiding its internals. The tracer reads
+        # this flag when it builds the scope tree from the forward pass.
         self.collapse = collapse
 
     def children(self) -> list[Module]:
@@ -60,14 +60,13 @@ class Sequential(Module):
         # whatever is fed in is the graph's entrypoint
         if input.producer is None:
             input.kind = NodeKind.INPUT
-            input.scope = self.name
 
         for layer in self.layers:
-            with bound(_scope, layer.name):
-                input = layer(input)
+            input = layer(input)
 
-            # a named layer boundary: a more specific role than OP_RESULT
-            input.name = f"{layer.name.split('/')[-1]}/result"
+            # a named layer boundary: a more specific role than OP_RESULT. The
+            # scope prefix that qualifies this is supplied by the tracer at draw time.
+            input.name = "result"
             input.kind = NodeKind.LAYER_OUTPUT
 
         return input
@@ -126,7 +125,6 @@ class Dropout(Module):
                 data=keep_values,
                 shape=input.shape,
                 kind=NodeKind.CONSTANT,
-                scope=_scope.get(),
                 name="mask",
             )
             output = (input / (1 - self.p)) * dropout_mask
@@ -194,7 +192,6 @@ class BatchNorm(Module):
                 self.running_mean,
                 shape=((1, self.n_features)),
                 kind=NodeKind.CONSTANT,
-                scope=_scope.get(),
                 name="mean",
             )
         )
@@ -206,7 +203,6 @@ class BatchNorm(Module):
                 self.running_var,
                 shape=((1, self.n_features)),
                 kind=NodeKind.CONSTANT,
-                scope=_scope.get(),
                 name="variance",
             )
         )
@@ -215,7 +211,6 @@ class BatchNorm(Module):
             [self.epsilon],
             shape=(1,),
             kind=NodeKind.CONSTANT,
-            scope=_scope.get(),
             name="epsilon",
         )
 
@@ -256,7 +251,6 @@ class LayerNorm(Module):
             shape=(1, n_features),
             kind=NodeKind.PARAMETER,
             name="gain",
-            scope=_scope.get(),
         )
 
         self.bias = Tensor(
@@ -264,7 +258,6 @@ class LayerNorm(Module):
             shape=(1, n_features),
             kind=NodeKind.PARAMETER,
             name="bias",
-            scope=_scope.get(),
         )
 
     def own_parameters(self):
@@ -272,12 +265,10 @@ class LayerNorm(Module):
 
     def forward(self, input: Tensor) -> Tensor:
         mean = input.mean(axis=1)
-        mean.scope = _scope.get()
         mean.kind = NodeKind.OP_RESULT
 
         variance = ((input - mean) ** 2).mean(axis=1)
         variance.kind = NodeKind.OP_RESULT
-        variance.scope = _scope.get()
 
         # NOTE: original paper doesnt include epsilon
         std = variance.sqrt()

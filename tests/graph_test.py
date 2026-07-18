@@ -26,7 +26,9 @@ def test_computation_view_is_flat_with_no_clusters():
     source = graph.draw_computation().source
 
     assert "subgraph" not in source
-    assert "Linear_0/weights" in source
+    # nodes carry only their intrinsic role now; the scope prefix that qualified
+    # them (Linear_0/) is supplied by the tracer's cluster boxes, not the label
+    assert "weights" in source
 
 
 def test_combined_view_nests_a_cluster_per_scope():

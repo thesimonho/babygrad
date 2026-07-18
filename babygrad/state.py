@@ -5,7 +5,6 @@ ContextVars so we don't need to prop drill model state through the entire graph.
 from contextlib import contextmanager
 from contextvars import ContextVar
 
-_scope: ContextVar[str | None] = ContextVar("scope", default=None)
 _is_training: ContextVar[bool] = ContextVar("is_training", default=True)
 
 

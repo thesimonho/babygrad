@@ -4,8 +4,6 @@ import math
 from collections import defaultdict
 from typing import overload
 
-from babygrad.state import _scope
-
 from . import autograd, formatting, ops, types
 from .types import NodeKind, Number
 
@@ -48,7 +46,6 @@ class Tensor:
         shape: types.Shape,
         kind: NodeKind,
         name: str | None = None,
-        scope: str | None = None,
     ) -> None:
         """Tensor constructor.
 
@@ -57,7 +54,6 @@ class Tensor:
             shape: Shape of the tensor.
             kind: NodeKind of the tensor. Role in the graph. Whoever creates the tensor for a purpose stamps it.
             name: Name of the tensor.
-            scope: Layer scope of the tensor. For graph clustering (None = outside any).
         """
         assert len(data) == math.prod(shape), "Tensor data has incorrect shape"
         self.data = data
@@ -66,7 +62,6 @@ class Tensor:
         self.producer: ops.Op | None = None
         self.name = name
         self.kind = kind
-        self.scope = scope
 
     def __repr__(self) -> str:
         """Return an aligned matrix-style preview of the tensor contents."""
@@ -300,5 +295,5 @@ def to_stamped_scalar(value: Number | Tensor) -> Tensor:
     if isinstance(value, Tensor):
         return value
 
-    t = Tensor([value], shape=(1,), kind=NodeKind.CONSTANT, scope=_scope.get())
+    t = Tensor([value], shape=(1,), kind=NodeKind.CONSTANT)
     return t

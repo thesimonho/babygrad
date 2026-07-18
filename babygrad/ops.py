@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Callable, ClassVar, Optional
 
 from babygrad import autograd, kernels, lib, types
-from babygrad.state import _scope
 from babygrad.types import NodeKind
 
 if TYPE_CHECKING:
@@ -23,7 +22,6 @@ class Op(ABC):
 
     def __init__(self, inputs: list[Tensor]):
         self.inputs = inputs
-        self.scope = _scope.get()
 
     def forward(self) -> Tensor:
         """
@@ -32,7 +30,7 @@ class Op(ABC):
         from babygrad.tensor import Tensor
 
         data, shape = self.compute()
-        self.output = Tensor(data, shape, kind=NodeKind.OP_RESULT, scope=self.scope)
+        self.output = Tensor(data, shape, kind=NodeKind.OP_RESULT)
         self.output.producer = self
         return self.output
 

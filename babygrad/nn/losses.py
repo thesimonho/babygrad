@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
-from babygrad.state import bound, _scope, _is_training
+from babygrad.state import _is_training
 from babygrad.tracing import Traceable
 
 
@@ -17,21 +17,9 @@ class Loss(Traceable):
     def __init__(self, collapse: bool = False):
         self.collapse = collapse
 
-    @property
-    def collapsed_scopes(self) -> set[str]:
-        """Scopes to draw as one box, for GraphVisualizer.
-
-        A Loss reports its own because it sits outside the Module tree, so
-        Model.stamp_name_and_scope never walks it. Union this with the model's.
-        """
-        return {type(self).__name__} if self.collapse else set()
-
     def forward(self, y_true: Tensor, y_pred: Tensor) -> Tensor:
         y_true.kind = NodeKind.TARGET
-        # scope the loss ops so they cluster into their own box, like a layer
-        with bound(_scope, type(self).__name__):
-            result = self.compute(y_true, y_pred)
-
+        result = self.compute(y_true, y_pred)
         result.kind = NodeKind.LOSS
         return result
 
@@ -53,7 +41,6 @@ class CCE(Loss):
                 [self.epsilon],
                 shape=(1,),
                 kind=NodeKind.CONSTANT,
-                scope=_scope.get(),
                 name="epsilon",
             )
 
