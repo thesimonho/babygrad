@@ -19,6 +19,7 @@
 import { formatTick } from "../format.js";
 import { note } from "../dom.js";
 import { smoothByTag } from "../smooth.js";
+import { epochTip } from "./crosshair.js";
 
 const LOSS_COLOR = "#457b9d";
 const OVERFIT_COLOR = "#e63946";
@@ -26,7 +27,9 @@ const OVERFIT_COLOR = "#e63946";
 /**
  * A line chart of the scalar series over epochs. `options.logScale` switches the
  * y-axis to log. With no metrics it degrades to a single-axis chart; with any
- * series hidden it simply omits that line and any aid that depended on it.
+ * series hidden it simply omits that line and any aid that depended on it. Returns
+ * `{ node, tipContent }`: the Plot node, and a per-epoch readout for the shared
+ * crosshair tip (null for the empty-data placeholder).
  */
 export function scalarChart(history, Plot, width, options = {}) {
   const loss = [];
@@ -39,7 +42,7 @@ export function scalarChart(history, Plot, width, options = {}) {
       bucket.push({ tag, epoch: Number(step), value: series[step] });
     }
   }
-  if (loss.length === 0 && metric.length === 0) return note("no scalar series yet");
+  if (loss.length === 0 && metric.length === 0) return { node: note("no scalar series yet"), tipContent: null };
 
   // Loss is the primary (left) axis; if there is no loss series, metrics take it.
   const primary = loss.length > 0 ? loss : metric;
@@ -72,10 +75,9 @@ export function scalarChart(history, Plot, width, options = {}) {
       ? dualAxisMarks(smoothedMetric, scale, secondaryMax, primaryLabel, options, Plot)
       : []),
     ...bestEpochMarks(valLoss, metric, metricY, Plot),
-    valueTip(primary, secondary, Plot),
   ];
 
-  return Plot.plot({
+  const node = Plot.plot({
     width,
     height: 300,
     marginLeft: 60,
@@ -85,6 +87,10 @@ export function scalarChart(history, Plot, width, options = {}) {
     color: { legend: true },
     marks,
   });
+  // The tip lists every series' honest value (not its rescaled plot height) at the
+  // hovered epoch, so one hover reads loss + metrics at once. Synced across charts
+  // via the shared crosshair (crosshair.js).
+  return { node, tipContent: epochTip([...primary, ...secondary], (d) => `${d.tag}  ${formatTick(d.value)}`) };
 }
 
 /** The y-scale config: grid always, an explicit label/format only on a single
@@ -162,31 +168,3 @@ function ring(data, y, color, label, Plot) {
   ];
 }
 
-/**
- * A tip that lists every series' true value at the hovered epoch, so one hover
- * reads the whole column (loss + metrics) at once. Metric values are the honest
- * ones, not their rescaled plot heights. The vertical reference line is a shared
- * DOM overlay (see crosshair.js) so it syncs across every chart, not just this one.
- */
-function valueTip(primary, secondary, Plot) {
-  const byEpoch = new Map();
-  for (const point of [...primary, ...secondary]) {
-    const column = byEpoch.get(point.epoch) ?? [];
-    column.push(point);
-    byEpoch.set(point.epoch, column);
-  }
-  const epochRows = [...byEpoch.entries()].map(([epoch, column]) => ({
-    epoch,
-    title: [`epoch ${epoch}`, ...column.map((d) => `${d.tag}  ${formatTick(d.value)}`)].join("\n"),
-  }));
-  return Plot.tip(
-    epochRows,
-    Plot.pointerX({
-      x: "epoch",
-      frameAnchor: "top",
-      title: "title",
-      format: { x: false },
-      pointerSize: 0, // no callout arrow; the shared crosshair line marks the epoch
-    }),
-  );
-}

@@ -193,7 +193,8 @@ function diagnosticGrid(visible, history, width) {
   for (const item of visible) {
     const { series, options } = computeDiagnostic(item.id, history);
     const chartOptions = { ...options, smoothing: state.diagnosticsSmoothing };
-    grid.append(chartCard(item.label, attachCrosshair(linesChart(series, Plot, cellWidth, chartOptions))));
+    const { node, tipContent } = linesChart(series, Plot, cellWidth, chartOptions);
+    grid.append(chartCard(item.label, attachCrosshair(node, tipContent)));
   }
   return grid;
 }
@@ -212,7 +213,8 @@ function ridgeGrid(visible, history) {
 function scalarSection(subset, width) {
   const wrap = document.createElement("div");
   const options = { logScale: state.logScale, smoothing: state.lossSmoothing };
-  const chart = attachCrosshair(scalarChart(subset, Plot, width, options));
+  const { node, tipContent } = scalarChart(subset, Plot, width, options);
+  const chart = attachCrosshair(node, tipContent);
   wrap.append(lossOptions(), chart);
   return wrap;
 }

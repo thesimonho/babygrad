@@ -10,11 +10,14 @@
 import { formatTick } from "../format.js";
 import { note } from "../dom.js";
 import { smoothSeries } from "../smooth.js";
+import { epochTip } from "./crosshair.js";
 
-/** A line chart from `[{ label, points: [{ epoch, value }] }]`. */
+/** A line chart from `[{ label, points: [{ epoch, value }] }]`. Returns
+ * `{ node, tipContent }`: the Plot node, and a per-epoch readout for the shared
+ * crosshair tip (null for the empty-data placeholder). */
 export function linesChart(seriesList, Plot, width, options = {}) {
   const rows = flattenRows(seriesList, (series) => series.points);
-  if (rows.length === 0) return note("no data yet");
+  if (rows.length === 0) return { node: note("no data yet"), tipContent: null };
 
   // Smoothing feeds only the drawn lines; the hover tip reads the true values.
   const smoothedRows = flattenRows(seriesList, (series) => smoothSeries(series.points, options.smoothing));
@@ -22,18 +25,18 @@ export function linesChart(seriesList, Plot, width, options = {}) {
   const y = { label: options.yLabel ?? "value", grid: true, tickFormat: formatTick };
   if (options.logY) y.type = "log";
 
-  return Plot.plot({
+  const node = Plot.plot({
     width,
     height: 220,
     marginLeft: 60,
     x: { label: "epoch" },
     y,
     color: { legend: true },
-    marks: [
-      Plot.line(smoothedRows, { x: "epoch", y: "value", stroke: "label" }),
-      valueTip(rows, Plot),
-    ],
+    marks: [Plot.line(smoothedRows, { x: "epoch", y: "value", stroke: "label" })],
   });
+  // The tip lists every line's true value at the hovered epoch, so one hover reads
+  // the whole column. Synced across charts via the shared crosshair (crosshair.js).
+  return { node, tipContent: epochTip(rows, (r) => `${r.label}  ${formatTick(r.value)}`) };
 }
 
 /** Flatten `[{ label, points }]` into `[{ label, epoch, value }]` rows, taking
@@ -46,30 +49,4 @@ function flattenRows(seriesList, pointsOf) {
     }
   }
   return rows;
-}
-
-/** A tip listing every line's value at the hovered epoch, so one hover reads the
- * whole column at once. The vertical reference line is a shared DOM overlay (see
- * crosshair.js) so it syncs across every chart, not just this one. */
-function valueTip(rows, Plot) {
-  const byEpoch = new Map();
-  for (const row of rows) {
-    const column = byEpoch.get(row.epoch) ?? [];
-    column.push(row);
-    byEpoch.set(row.epoch, column);
-  }
-  const tipRows = [...byEpoch.entries()].map(([epoch, column]) => ({
-    epoch,
-    title: [`epoch ${epoch}`, ...column.map((r) => `${r.label}  ${formatTick(r.value)}`)].join("\n"),
-  }));
-  return Plot.tip(
-    tipRows,
-    Plot.pointerX({
-      x: "epoch",
-      frameAnchor: "top",
-      title: "title",
-      format: { x: false },
-      pointerSize: 0,
-    }),
-  );
 }
