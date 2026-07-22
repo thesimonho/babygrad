@@ -8,14 +8,6 @@ Designed to be a lightweight learning project that's easy to mess around with.
 > [!CAUTION]
 > Not intended for serious usage. Expect it to be slow - no C, no GPU.
 
-## Rules
-
-- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here.
-
-- **Every operation must be understood before it's implemented.** No copying reference code. No AI implementation.
-
-A couple of caveats/exceptions: I have no desire to write my own plotting library, so matplotlib and graphviz are used for viz. There are also notebooks associated with each phase - those are AI generated and exist simply as a demo of the API and what was completed during that phase.
-
 ## Development
 
 Install the project and development tools:
@@ -34,7 +26,7 @@ Run notebooks with the `.venv` kernel. `uv sync --dev` installs `babygrad` as an
 
 ### Visualization dependencies (optional)
 
-Histograms and computation-graph diagrams use `matplotlib` and `graphviz`. The `graphviz` Python package is installed by `uv sync`, but graph rendering also needs the system `dot` binary:
+Graph rendering needs the system `dot` binary:
 
 ```bash
 # Debian/Ubuntu/WSL
@@ -43,9 +35,17 @@ sudo apt install graphviz
 brew install graphviz
 ```
 
-Everything else runs without it.
+## Curriculum
 
-## Roadmap
+If you want to go through this curriculum yourself, implement each phase in the order below.
+
+### Rules
+
+- **Zero external dependencies.** If it isn't in the Python standard library or written by hand, it doesn't belong here.
+
+- **Every phase must be hand implemented.** No copying reference code. No AI implementation.
+
+A couple of caveats/exceptions: I have no desire to write my own plotting library, so matplotlib/graphviz/etc. are used for viz. There are also notebooks associated with each phase - those are AI generated and exist simply as a demo of the API and what was completed during that phase.
 
 ### Phase 1: Tensor Foundations
 
@@ -200,12 +200,13 @@ Everything else runs without it.
 [Notebook demo](./notebooks/phase7_residual_networks.ipynb)
 
 - [x] **Skip connections** — the residual block as a solution to vanishing gradients
-- [x] **Stacking residual blocks** — building a small ResNet
+
+**Phase demonstration:**
+
+- [x] **Small ResNet** — stack residual blocks into a trainable model
   - [Deep Residual Learning for Image Recognition](https://arxiv.org/abs/1512.03385) — He et al., 2015
 
 ### Phase 8: The Original Transformer
-
-**Building blocks** — general techniques the transformer relies on:
 
 - [x] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep)
 - [x] **Layer normalization**
@@ -217,21 +218,18 @@ Everything else runs without it.
 - [x] **Label smoothing**\* — soften one-hot targets
   - [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) — Szegedy et al., 2016
 - [ ] **Data pipeline — sequence collation** — pad + mask variable-length sequences and lazily load tokens by offset, extending the eager tabular collate
-
-#### Phase 8: detour
-
-- [✨] Get completely sidetracked by making plots, visualizations, and other fun things
-
-#### Phase 8: ...and we're back
-
-**The transformer** — [Attention Is All You Need](https://arxiv.org/abs/1706.03762) (Vaswani et al., 2017):
-
 - [ ] **Scaled dot-product attention** — queries, keys, values
 - [ ] **Multi-head attention** — parallel attention heads, concatenation, projection
 - [ ] **Sinusoidal positional encoding** — injecting sequence order
+- [ ] **Token embeddings and output projection** — map token IDs into the model and decoder states back to vocabulary scores
 - [ ] **Position-wise feed-forward network** — the other half of a transformer block
-- [ ] **Encoder and decoder blocks** — assembling the full architecture
+- [ ] **Encoder and decoder blocks** — assembling the full encoder–decoder architecture
 - [ ] **Masking** — padding masks, causal (look-ahead) masks
+
+**Phase demonstration:**
+
+- [ ] **Original Transformer model** — assemble a trainable encoder–decoder sequence-to-sequence model
+  - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Vaswani et al., 2017
 
 ### Phase 9: Modern Transformer Modifications
 
@@ -264,3 +262,47 @@ Everything else runs without it.
 - [ ] **Sparse gating** — routing tokens to a subset of expert FFNs
 - [ ] **MoE transformer block** — integrating sparse experts into the transformer
   - [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Shazeer et al., 2017
+
+### Phase 13: Decoder-Only Language Model
+
+- [ ] **Tokenizer and vocabulary** — reusable text encoding and decoding
+  - [SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226) — Kudo & Richardson, 2018
+- [ ] **Model state serialization** — save and restore parameters and training state
+- [ ] **Autoregressive generation support** — reusable sampling needed to generate sequences
+
+**Phase demonstration:**
+
+- [ ] **Decoder-only language model** — reuse the decoder-side components to train, restore, and generate text with a causal model
+  - [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) — Radford et al., 2019
+
+### Phase 14: Fine-Tuning
+
+- [ ] **Parameter selection and freezing** — control which model parameters an optimizer updates
+
+**Phase demonstration:**
+
+- [ ] **Fine-tuned language model** — adapt the pretrained model to a narrower task or desired response format and compare it with the base checkpoint
+  - [Finetuned Language Models Are Zero-Shot Learners](https://arxiv.org/abs/2109.01652) — Wei et al., 2021
+
+### Phase 15: Parameter-Efficient Fine-Tuning
+
+- [ ] **Parameter-efficient adapters** — reusable support for adding and training a small set of adaptation parameters
+- [ ] **Adapter state serialization** — save and restore adapter state separately from the base model
+
+**Phase demonstration:**
+
+- [ ] **LoRA-adapted language model** — adapt the same model with LoRA and compare it with full-parameter fine-tuning
+  - [LoRA: Low-Rank Adaptation of Large Language Models](https://arxiv.org/abs/2106.09685) — Hu et al., 2021
+
+### Phase 16: Reinforcement Learning Post-Training
+
+- [ ] **Language-model reinforcement learning background** — reusable policy, rollout, reward, and optimization pieces required by the chosen methods
+  - [Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning](https://doi.org/10.1007/BF00992696) — Williams, 1992
+  - [Proximal Policy Optimization Algorithms](https://arxiv.org/abs/1707.06347) — Schulman et al., 2017
+
+**Phase demonstrations:**
+
+- [ ] **RLHF-trained language model** — improve the fine-tuned model using human preference feedback
+  - [Training language models to follow instructions with human feedback](https://arxiv.org/abs/2203.02155) — Ouyang et al., 2022
+- [ ] **RLVR-trained language model** — improve the fine-tuned model using automatically verifiable rewards
+  - [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948) — DeepSeek-AI et al., 2025
