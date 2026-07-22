@@ -1,18 +1,27 @@
 """Presentation for the graph renderer: graphviz attributes, node styling, cluster
 colours. Kept apart from graph.py so changing a colour never touches traversal code.
+
+The palette (background, per-role node colours, cluster colours) lives in
+``static/theme.json`` so this renderer and the browser dashboard read one source
+of colour truth. Only the graphviz-structural attributes (spacing, splines,
+penwidth) stay here — they have no Cytoscape equivalent.
 """
 
 from __future__ import annotations
 
+import json
 import zlib
+from pathlib import Path
 
 import graphviz
 
 from babygrad.types import NodeKind
 
+_THEME = json.loads((Path(__file__).parent / "static" / "theme.json").read_text())
+
 GRAPH_ATTR = {
     "rankdir": "TB",
-    "bgcolor": "white",
+    "bgcolor": _THEME["background"],
     "splines": "spline",
     "nodesep": "0.35",
     "ranksep": "0.6",
@@ -23,37 +32,31 @@ NODE_ATTR = {
     "margin": "0.18,0.07",
 }
 EDGE_ATTR = {
-    "color": "#9aa3ab",
+    "color": _THEME["edge"]["color"],
     "arrowsize": "0.7",
     "penwidth": "1.2",
     "fontname": "Helvetica",
     "fontsize": "9",
-    "fontcolor": "#6c757d",
+    "fontcolor": _THEME["edge"]["fontColor"],
 }
 
-# (shape, fill, font) per role
-_DEFAULT_STYLE = ("box", "#edf2f4", "#495057")
+
+def _style(entry: dict) -> tuple[str, str, str]:
+    """A theme node entry as the (shape, fill, font) tuple the renderer wants."""
+    return (entry["shape"], entry["fill"], entry["font"])
+
+
+# (shape, fill, font) per role, plus the fallback — read from the shared theme.
+_DEFAULT_STYLE = _style(_THEME["nodes"]["_default"])
 _NODE_STYLE: dict[NodeKind, tuple[str, str, str]] = {
-    NodeKind.INPUT: ("box", "#e9c46a", "#3d3d3d"),
-    NodeKind.TARGET: ("box", "#e9c46a", "#3d3d3d"),
-    NodeKind.PARAMETER: ("box", "#a8dadc", "#1d3557"),
-    NodeKind.OP: ("ellipse", "#e63946", "white"),
-    NodeKind.OP_RESULT: ("box", "#edf2f4", "#495057"),
-    NodeKind.LAYER_OUTPUT: ("box", "#457b9d", "white"),
-    NodeKind.LOSS: ("box", "#1d3557", "white"),
-    NodeKind.CONSTANT: ("box", "#8a6bb5", "white"),
+    NodeKind[name]: _style(entry)
+    for name, entry in _THEME["nodes"].items()
+    if name != "_default"
 }
 
 # (fill, border) pairs — Picked per cluster by a stable hash of its scope path, so a given scope keeps its colour across renders and sibling boxes read as distinct.
 _CLUSTER_PALETTE: list[tuple[str, str]] = [
-    ("#eef4fb", "#c3d9ee"),  # blue
-    ("#eef7f0", "#c6e4cd"),  # green
-    ("#fbf4e9", "#ecd9b8"),  # amber
-    ("#f5eefb", "#dcc6ee"),  # purple
-    ("#eafaf7", "#bfe6dd"),  # teal
-    ("#fbeef2", "#eec6d2"),  # rose
-    ("#f2f3f5", "#dadde1"),  # slate
-    ("#f6f8ea", "#dde6bb"),  # lime
+    (cluster["fill"], cluster["border"]) for cluster in _THEME["clusters"]
 ]
 
 

@@ -1,0 +1,25 @@
+{
+  "background": "white",
+  "edge": { "color": "#9aa3ab", "fontColor": "#6c757d" },
+  "nodes": {
+    "INPUT": { "shape": "box", "fill": "#e9c46a", "font": "#3d3d3d" },
+    "TARGET": { "shape": "box", "fill": "#e9c46a", "font": "#3d3d3d" },
+    "PARAMETER": { "shape": "box", "fill": "#a8dadc", "font": "#1d3557" },
+    "OP": { "shape": "ellipse", "fill": "#e63946", "font": "white" },
+    "OP_RESULT": { "shape": "box", "fill": "#edf2f4", "font": "#495057" },
+    "LAYER_OUTPUT": { "shape": "box", "fill": "#457b9d", "font": "white" },
+    "LOSS": { "shape": "box", "fill": "#1d3557", "font": "white" },
+    "CONSTANT": { "shape": "box", "fill": "#8a6bb5", "font": "white" },
+    "_default": { "shape": "box", "fill": "#edf2f4", "font": "#495057" }
+  },
+  "clusters": [
+    { "fill": "#eef4fb", "border": "#c3d9ee" },
+    { "fill": "#eef7f0", "border": "#c6e4cd" },
+    { "fill": "#fbf4e9", "border": "#ecd9b8" },
+    { "fill": "#f5eefb", "border": "#dcc6ee" },
+    { "fill": "#eafaf7", "border": "#bfe6dd" },
+    { "fill": "#fbeef2", "border": "#eec6d2" },
+    { "fill": "#f2f3f5", "border": "#dadde1" },
+    { "fill": "#f6f8ea", "border": "#dde6bb" }
+  ]
+}

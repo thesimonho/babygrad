@@ -4,7 +4,7 @@ __pycache__/
 build/
 dist/
 wheels/
-plots/
+/plots/
 *.egg-info
 *_weights.png
 .ipynb_checkpoints/

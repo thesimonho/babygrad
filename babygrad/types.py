@@ -12,6 +12,21 @@ type History = dict[Tag, dict[Step, HistoryValue]]
 type HistoryValue = float | list[float]
 
 
+def series_tag(label: str, role: str) -> Tag:
+    """The canonical tag for a recorded value series: ``"<module label>/<role>"``.
+
+    The single source of this format so the recorder (which writes the history)
+    and the graph JSON (which references a tag to link a node to its history)
+    cannot drift out of sync.
+    """
+    return f"{label}/{role}"
+
+
+def grad_tag(base: Tag) -> Tag:
+    """The tag for a value series' gradient companion: ``"<base>/grad"``."""
+    return f"{base}/grad"
+
+
 class NodeKind(Enum):
     """The role a graph node plays, stamped at creation by whoever knows it.
 

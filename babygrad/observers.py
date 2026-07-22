@@ -13,11 +13,21 @@ the Recorder captures *values over time*.
 
 from __future__ import annotations
 
+import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from babygrad.types import History, HistoryValue, NodeKind, Scope, Step, Tag
+from babygrad.types import (
+    History,
+    HistoryValue,
+    NodeKind,
+    Scope,
+    Step,
+    Tag,
+    grad_tag,
+    series_tag,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -136,9 +146,19 @@ class Recorder:
     def __init__(self):
         self.step: Step = 0
         self.history: History = defaultdict(dict)
+        # Guards history so a concurrent reader (the dashboard's push thread) sees
+        # a consistent copy while training writes from another thread.
+        self._lock = threading.Lock()
 
     def record(self, tag: Tag, value: HistoryValue):
-        self.history[tag][self.step] = value
+        with self._lock:
+            self.history[tag][self.step] = value
+
+    def snapshot(self) -> History:
+        """A consistent copy of the history for a concurrent reader, taken under
+        the write lock so no series is caught mid-append."""
+        with self._lock:
+            return {tag: dict(points) for tag, points in self.history.items()}
 
     def capture(self, tracer: Tracer) -> None:
         """Record parameter and layer-output values from a traced forward.
@@ -174,7 +194,7 @@ class Recorder:
                 continue
             recorded.add(id(param))
             role = param.name.split("/")[-1] if param.name else "parameter"
-            self._record_series(f"{label}/{role}", param)
+            self._record_series(series_tag(label, role), param)
 
     def _record_output(self, output: Tensor, label: str, recorded: set[int]) -> None:
         """Record a module's output as "<label>/result", but only a real layer
@@ -185,8 +205,8 @@ class Recorder:
         if id(output) in recorded:
             return
         recorded.add(id(output))
-        self._record_series(f"{label}/result", output)
+        self._record_series(series_tag(label, "result"), output)
 
     def _record_series(self, tag: Tag, tensor: Tensor) -> None:
         self.record(tag, list(tensor.data))
-        self.record(f"{tag}/grad", list(tensor.grad))
+        self.record(grad_tag(tag), list(tensor.grad))

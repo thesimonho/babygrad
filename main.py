@@ -18,6 +18,7 @@ from babygrad.nn.optimizers import SGD, Adam
 from babygrad.nn.schedulers import ConstantLR, CosineAnnealingLR
 from babygrad.observers import Recorder, Tracer
 from babygrad.tracing import tracing
+from babygrad.viz import serve
 from babygrad.viz.attribution import attribute
 from babygrad.viz.graph import GraphVisualizer
 from babygrad.viz.plot import PlotVisualizer
@@ -26,7 +27,7 @@ if TYPE_CHECKING:
     from babygrad.nn.modules import Module
 
 
-def train_iris():
+def train_iris(live: bool = False):
     dataset = CSVDataset(Path("./data/iris.csv"), 4, True)
     train, val, test = split_train_val_test(dataset, one_hot=True)
 
@@ -55,8 +56,19 @@ def train_iris():
     model = Model(root)
     recorder = Recorder()
     trainer = Trainer(model, config, recorder)
+
+    pusher = None
+    if live:
+        # Stream this run to a running dashboard server: connect before fit so the
+        # graph and the loss/param plots fill in as training progresses.
+        sample_x, _ = next(iter(DataLoader(train, config.batch_size)))
+        pusher = serve.connect(model, recorder, sample_x)
+
     train_loss = trainer.fit(train, val)
     trainer.test(test)
+
+    if pusher is not None:
+        pusher.flush()  # push the final epoch the poll loop leaves behind
 
     if train_loss is not None:
         # Trace a fresh forward: the fit() loss carries no scope attribution, so
@@ -65,10 +77,10 @@ def train_iris():
         tracer = Tracer()
         with tracing(tracer):
             loss = config.criterion(demo_y, model.forward(demo_x))
-        visualizer = GraphVisualizer(loss, attribute(tracer.records))
-        visualizer.draw_architecture(save_path="./plots/architecture.svg")
-        visualizer.draw_computation(save_path="./plots/computation.svg")
-        visualizer.draw_combined(save_path="./plots/combined.svg")
+        grapher = GraphVisualizer(loss, attribute(tracer.records))
+        grapher.draw_architecture(save_path="./plots/architecture.svg")
+        grapher.draw_computation(save_path="./plots/computation.svg")
+        grapher.draw_combined(save_path="./plots/combined.svg")
 
     plotter = PlotVisualizer(recorder.history)
     plotter.plot_scalar(["loss", "val_loss"], save_path="./plots/loss.png")
@@ -81,7 +93,7 @@ def train_iris():
     )
 
 
-def train_resnet():
+def train_resnet(live: bool = False):
     dataset = CSVDataset(Path("./data/concentric_circles.csv"), target_col_idx=2)
     train, val, test = split_train_val_test(dataset, one_hot=True)
 
@@ -113,13 +125,24 @@ def train_resnet():
         metrics=[Accuracy()],
     )
     model = Model(root)
-    trainer = Trainer(model, config)
+    recorder = Recorder()
+    trainer = Trainer(model, config, recorder)
+
+    pusher = None
+    if live:
+        sample_x, _ = next(iter(DataLoader(train, config.batch_size)))
+        pusher = serve.connect(model, recorder, sample_x)
+
     trainer.fit(train, val)
     trainer.test(test)
 
+    if pusher is not None:
+        pusher.flush()
+
 
 if __name__ == "__main__":
+    live = "--dashboard" in sys.argv
     if len(sys.argv) > 1 and sys.argv[1] == "resnet":
-        train_resnet()
+        train_resnet(live)
     else:
-        train_iris()
+        train_iris(live)

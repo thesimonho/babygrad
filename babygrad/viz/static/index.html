@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>babyboard</title>
+
+    <!--
+      Frontend libraries load from CDN in dependency order (no build step):
+        cytoscape    -> elkjs -> cytoscape-elk  (layered, compound-aware layout)
+        cytoscape    -> cytoscape-expand-collapse (scope collapse)
+      ELK's `elk.layered` gives a directional DAG flow while still respecting
+      the compound scope nesting.
+    -->
+    <script src="https://unpkg.com/cytoscape@3.34.0/dist/cytoscape.min.js"></script>
+    <script src="https://unpkg.com/elkjs@0.12.0/lib/elk.bundled.js"></script>
+    <script src="https://unpkg.com/cytoscape-elk@2.3.0/dist/cytoscape-elk.js"></script>
+    <script src="https://unpkg.com/cytoscape-expand-collapse@4.1.1/cytoscape-expand-collapse.js"></script>
+
+    <style>
+      :root {
+        /* Light chrome to match the shared theme.json palette (white canvas,
+           pastel fills). Accent is the theme's layer-output blue. */
+        --bg: #f7f8fa;
+        --panel: #ffffff;
+        --ink: #2b3040;
+        --muted: #6c757d;
+        --accent: #457b9d;
+        --line: #dfe3e8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--ink);
+        font:
+          14px/1.4 system-ui,
+          sans-serif;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
+      nav {
+        display: flex;
+        gap: 4px;
+      }
+      .tab {
+        padding: 6px 14px;
+        border: 1px solid transparent;
+        border-radius: 6px;
+        background: none;
+        color: var(--muted);
+        cursor: pointer;
+        font: inherit;
+      }
+      .tab.active {
+        color: var(--ink);
+        background: var(--panel);
+        border-color: var(--line);
+      }
+      main {
+        flex: 1;
+        position: relative;
+        min-height: 0;
+      }
+      .panel {
+        position: absolute;
+        inset: 0;
+        display: none;
+      }
+      .panel.active {
+        display: block;
+      }
+      #graph {
+        width: 100%;
+        height: 100%;
+      }
+      /* Plots tab: a fixed-width control sidebar beside a scrolling chart area. */
+      #plots-dashboard {
+        display: flex;
+        height: 100%;
+      }
+      #plots-sidebar {
+        flex: none;
+        width: 240px;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+        overflow-y: auto;
+        padding: 14px 12px;
+      }
+      #plots-main {
+        flex: 1;
+        min-width: 0;
+        overflow: auto;
+        padding: 24px;
+      }
+      .plots-search {
+        width: 100%;
+        padding: 6px 8px;
+        margin-bottom: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        font: inherit;
+        font-size: 12px;
+      }
+      .plots-group {
+        margin-bottom: 4px;
+      }
+      .plots-group-head {
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        padding: 4px 2px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      .plots-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 2px 2px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .plots-item input {
+        cursor: pointer;
+      }
+      .plots-section {
+        margin: 0 0 24px;
+      }
+      .plots-section-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        padding: 0 0 8px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        color: #2b3040;
+        cursor: pointer;
+      }
+      .plot-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 12px 20px;
+      }
+      .diagnostics-grid {
+        display: grid;
+        gap: 16px 20px;
+      }
+      .plot-card-title {
+        margin: 0 0 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .plots-note {
+        color: var(--muted);
+      }
+      .plots-options {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 8px;
+      }
+      .plots-option {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .plots-option input {
+        cursor: pointer;
+      }
+      .plots-option input[type="range"] {
+        width: 96px;
+      }
+      .plots-slider-value {
+        min-width: 22px;
+        font-variant-numeric: tabular-nums;
+      }
+      #hint {
+        position: absolute;
+        left: 16px;
+        bottom: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        pointer-events: none;
+      }
+      #collapse-all {
+        position: absolute;
+        top: 12px;
+        left: 16px;
+        /* Above cytoscape-expand-collapse's overlay canvas (z-index 999), which
+           otherwise sits over the whole graph and swallows the click. */
+        z-index: 1000;
+        padding: 6px 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--panel);
+        color: var(--ink);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      #collapse-all:hover {
+        border-color: var(--accent);
+      }
+      #node-popup {
+        display: none;
+        position: fixed;
+        z-index: 10;
+        min-width: 220px;
+        max-width: 270px;
+        padding: 10px 12px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 6px 24px rgba(20, 24, 40, 0.14);
+        font-size: 12px;
+        color: var(--ink);
+      }
+      .np-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+      .np-kind {
+        font-size: 10px;
+        letter-spacing: 0.4px;
+        color: var(--muted);
+      }
+      .np-meta,
+      .np-line {
+        margin: 2px 0;
+      }
+      .np-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .np-label {
+        color: var(--muted);
+        flex: none;
+      }
+      /* Let a long unbroken value (e.g. a deep scope path, which has slashes but
+         no spaces to break on) wrap inside the popup instead of overflowing and
+         clipping at its right edge. min-width:0 lets the flex item shrink. */
+      .np-line > span:last-child {
+        min-width: 0;
+        overflow-wrap: anywhere;
+        text-align: right;
+      }
+      .np-spark {
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <h1>babyboard</h1>
+      <nav>
+        <button class="tab active" data-panel="graph">Graph</button>
+        <button class="tab" data-panel="plots">Plots</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="panel active" data-panel="graph">
+        <div id="graph"></div>
+        <button id="collapse-all" type="button">Collapse all</button>
+        <div id="hint">
+          scroll to zoom · drag to pan · click a scope box to collapse
+        </div>
+      </section>
+      <section class="panel" data-panel="plots">
+        <div id="plots-dashboard">
+          <aside id="plots-sidebar"></aside>
+          <div id="plots-main">Loading plots…</div>
+        </div>
+      </section>
+    </main>
+
+    <div id="node-popup"></div>
+
+    <script src="stream.js"></script>
+    <script src="dashboard.js"></script>
+    <script src="popup.js"></script>
+    <script type="module" src="plots/main.js"></script>
+  </body>
+</html>
