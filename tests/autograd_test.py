@@ -47,6 +47,19 @@ def test_add_unbroadcasts_gradients():
     assert right.grad == [2.0, 2.0, 2.0]
 
 
+def test_add_unbroadcasts_rank_promoted_gradients():
+    """A (3,) operand is rank-promoted to (1, 3), so it must unbroadcast the same
+    way an explicit (1, 3) does — 3 gradients back, not the stretched 6."""
+    left = Tensor([1, 2, 3, 4, 5, 6], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([10, 20, 30], shape=(3,), kind=NodeKind.VIEW)
+
+    output = left + right
+    output.backward()
+
+    assert left.grad == [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    assert right.grad == [2.0, 2.0, 2.0]
+
+
 def test_backward_walks_graph():
     left = Tensor([1.0], shape=(1,), kind=NodeKind.VIEW)
     right = Tensor([2.0], shape=(1,), kind=NodeKind.VIEW)
@@ -137,6 +150,18 @@ def test_sub_unbroadcasts_gradients():
     assert right.grad == [-2.0, -2.0, -2.0]
 
 
+def test_sub_unbroadcasts_rank_promoted_gradients():
+    """Rank promotion must not lose the sign flip on the right operand."""
+    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([10.0, 20.0, 30.0], shape=(3,), kind=NodeKind.VIEW)
+
+    output = left - right
+    output.backward()
+
+    assert left.grad == [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+    assert right.grad == [-2.0, -2.0, -2.0]
+
+
 def test_neg_gradient():
     tensor = Tensor([2.0, -3.0], shape=(2,), kind=NodeKind.VIEW)
 
@@ -160,6 +185,19 @@ def test_mul_gradients():
 def test_mul_unbroadcasts_gradients():
     left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
     right = Tensor([10.0, 20.0, 30.0], shape=(1, 3), kind=NodeKind.VIEW)
+
+    output = left * right
+    output.backward()
+
+    assert left.grad == [10.0, 20.0, 30.0, 10.0, 20.0, 30.0]
+    assert right.grad == [5.0, 7.0, 9.0]
+
+
+def test_mul_unbroadcasts_rank_promoted_gradients():
+    """The reused operand's gradient sums its partners down each column:
+    right[0] met 1.0 and 4.0, so it gets 5.0."""
+    left = Tensor([1.0, 2.0, 3.0, 4.0, 5.0, 6.0], shape=(2, 3), kind=NodeKind.VIEW)
+    right = Tensor([10.0, 20.0, 30.0], shape=(3,), kind=NodeKind.VIEW)
 
     output = left * right
     output.backward()
@@ -249,7 +287,9 @@ def _weighted_matmul_loss(
     """
     left = Tensor(list(left_data), shape=left_shape, kind=NodeKind.VIEW)
     right = Tensor(list(right_data), shape=right_shape, kind=NodeKind.VIEW)
-    weight_tensor = Tensor(list(weights), shape=(left_shape[0], right_shape[1]), kind=NodeKind.VIEW)
+    weight_tensor = Tensor(
+        list(weights), shape=(left_shape[0], right_shape[1]), kind=NodeKind.VIEW
+    )
     loss = ((left @ right) * weight_tensor).sum()
     return loss.data[0]
 

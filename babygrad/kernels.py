@@ -1,70 +1,74 @@
+"""Lowest level math and reduce operations."""
+
 import math
 import operator
+import itertools
 
-from . import types
+from babygrad.types import Number, Shape
 
 
-def add(a: list[types.Number], b: list[types.Number]) -> list[types.Number]:
+def add(a: list[Number], b: list[Number]) -> list[Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
-    return [x + y for x, y in zip(a, b)]
+    return list(map(operator.add, a, b))
 
 
-def sub(a: list[types.Number], b: list[types.Number]) -> list[types.Number]:
+def sub(a: list[Number], b: list[Number]) -> list[Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
-    return [x - y for x, y in zip(a, b)]
+    return list(map(operator.sub, a, b))
 
 
-def neg(a: list[types.Number]) -> list[types.Number]:
+def neg(a: list[Number]) -> list[Number]:
+    # listcomp beats map(operator.neg, ...) here: no zip tuple to eliminate, and
+    # UNARY_NEG is cheaper than a C-level call per element
     return [-x for x in a]
 
 
-def absolute(a: list[types.Number]) -> list[types.Number]:
-    return [abs(x) for x in a]
+def absolute(a: list[Number]) -> list[Number]:
+    return list(map(operator.abs, a))
 
 
-def exp(a: list[types.Number]) -> list[types.Number]:
-    return [math.exp(x) for x in a]
+def exp(a: list[Number]) -> list[Number]:
+    return list(map(math.exp, a))
 
 
-def log(a: list[types.Number]) -> list[types.Number]:
-    return [math.log(x) for x in a]
+def log(a: list[Number]) -> list[Number]:
+    return list(map(math.log, a))
 
 
-def sqrt(a: list[types.Number]) -> list[types.Number]:
-    return [math.sqrt(x) for x in a]
+def sqrt(a: list[Number]) -> list[Number]:
+    return list(map(math.sqrt, a))
 
 
-def power(a: list[types.Number], exponent: types.Number) -> list[types.Number]:
-    return [x**exponent for x in a]
+def power(a: list[Number], exponent: Number) -> list[Number]:
+    return list(map(operator.pow, a, itertools.repeat(exponent)))
 
 
-def div(a: list[types.Number], b: list[types.Number]) -> list[types.Number]:
+def div(a: list[Number], b: list[Number]) -> list[Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
-    return [x / y for x, y in zip(a, b)]
+    return list(map(operator.truediv, a, b))
 
 
-def mul(a: list[types.Number], b: list[types.Number]) -> list[types.Number]:
+def mul(a: list[Number], b: list[Number]) -> list[Number]:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
-    return [x * y for x, y in zip(a, b)]
+    return list(map(operator.mul, a, b))
 
 
-def dot(a: list[types.Number], b: list[types.Number]) -> types.Number:
+def dot(a: list[Number], b: list[Number]) -> Number:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
-
     return sum(map(operator.mul, a, b))
 
 
 def matmul(
-    a: list[types.Number],
-    b: list[types.Number],
-    a_shape: types.Shape,
-    b_shape: types.Shape,
-) -> list[types.Number]:
+    a: list[Number],
+    b: list[Number],
+    a_shape: Shape,
+    b_shape: Shape,
+) -> list[Number]:
     """
     Calculate the dot product of two tensors.
 
@@ -91,31 +95,31 @@ def matmul(
     return output
 
 
-def reduce_sum(a: list[types.Number]) -> types.Number:
+def reduce_sum(a: list[Number]) -> Number:
     return sum(a)
 
 
-def reduce_mean(a: list[types.Number]) -> types.Number:
+def reduce_mean(a: list[Number]) -> Number:
     if len(a) == 0:
         raise ValueError
     return reduce_sum(a) / len(a)
 
 
-def reduce_max(a: list[types.Number]) -> types.Number:
+def reduce_max(a: list[Number]) -> Number:
     return max(a)
 
 
-def reduce_min(a: list[types.Number]) -> types.Number:
+def reduce_min(a: list[Number]) -> Number:
     return min(a)
 
 
-def rectify(a: list[types.Number]) -> list[types.Number]:
-    return [max(0, x) for x in a]
+def rectify(a: list[Number]) -> list[Number]:
+    return list(map(max, itertools.repeat(0.0), a))
 
 
-def sigmoid(a: list[types.Number]) -> list[types.Number]:
+def sigmoid(a: list[Number]) -> list[Number]:
     return [1 / (1 + math.exp(-x)) for x in a]
 
 
-def tanh(a: list[types.Number]) -> list[types.Number]:
-    return [math.tanh(x) for x in a]
+def tanh(a: list[Number]) -> list[Number]:
+    return list(map(math.tanh, a))

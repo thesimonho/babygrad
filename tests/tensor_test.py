@@ -11,9 +11,15 @@ def test_unary_ops():
     assert abs(t) == Tensor([1, 2, 3, 4], shape=(2, 2), kind=NodeKind.VIEW)
     assert -t == Tensor([-1, -2, 3, 4], shape=(2, 2), kind=NodeKind.VIEW)
     assert t**2 == Tensor([1, 4, 9, 16], shape=(2, 2), kind=NodeKind.VIEW)
-    assert abs(t).sqrt() == Tensor([math.sqrt(x) for x in abs(t).data], shape=(2, 2), kind=NodeKind.VIEW)
-    assert t.exp() == Tensor([math.exp(x) for x in t.data], shape=(2, 2), kind=NodeKind.VIEW)
-    assert abs(t).log() == Tensor([math.log(x) for x in abs(t).data], shape=(2, 2), kind=NodeKind.VIEW)
+    assert abs(t).sqrt() == Tensor(
+        [math.sqrt(x) for x in abs(t).data], shape=(2, 2), kind=NodeKind.VIEW
+    )
+    assert t.exp() == Tensor(
+        [math.exp(x) for x in t.data], shape=(2, 2), kind=NodeKind.VIEW
+    )
+    assert abs(t).log() == Tensor(
+        [math.log(x) for x in abs(t).data], shape=(2, 2), kind=NodeKind.VIEW
+    )
 
     with pytest.raises(ValueError):
         t.log()
@@ -79,7 +85,9 @@ def test_getitem_2d_slice_open_stop():
 
 def test_getitem_2d_slice_full():
     t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3), kind=NodeKind.VIEW)
-    assert t[:] == Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3), kind=NodeKind.VIEW)
+    assert t[:] == Tensor(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], shape=(4, 3), kind=NodeKind.VIEW
+    )
 
 
 def test_getitem_2d_slice_strided():
@@ -95,59 +103,89 @@ def test_getitem_2d_slice_negative_start():
 def test_getitem_2d_slice_strided_uneven():
     # step does not divide the span evenly: range(0, 5, 2) -> rows 0, 2, 4
     # row count must be len(range(...)) == 3, not (end - start) // step == 2
-    t = Tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], shape=(5, 3), kind=NodeKind.VIEW)
-    assert t[0:5:2] == Tensor([0, 1, 2, 6, 7, 8, 12, 13, 14], shape=(3, 3), kind=NodeKind.VIEW)
+    t = Tensor(
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+        shape=(5, 3),
+        kind=NodeKind.VIEW,
+    )
+    assert t[0:5:2] == Tensor(
+        [0, 1, 2, 6, 7, 8, 12, 13, 14], shape=(3, 3), kind=NodeKind.VIEW
+    )
 
 
 def test_add_vector_vector():
-    res = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW) + Tensor([5, 1], shape=(2, 1), kind=NodeKind.VIEW)
+    res = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW) + Tensor(
+        [5, 1], shape=(2, 1), kind=NodeKind.VIEW
+    )
     assert res.data == [7, 3]
 
 
-@pytest.mark.skip(reason="not implemented")
 def test_add_vector_matrix():
-    pass
+    """A (3,) vector is padded to (1, 3) then stretched down to (2, 3) to match m."""
+    v = Tensor([1, 2, 3], shape=(3,), kind=NodeKind.VIEW)
+    m = Tensor([10, 20, 30, 40, 50, 60], shape=(2, 3), kind=NodeKind.VIEW)
+
+    res = v + m
+
+    assert res.shape == (2, 3)
+    assert res.data == [11, 22, 33, 41, 52, 63]
 
 
 def test_add_matrix_matrix():
-    res = Tensor([2, 2, 1, 1, 4, 7, 9, 3, 2], shape=(3, 3), kind=NodeKind.VIEW) + Tensor(
-        [5, 1, 8, 2, 3, 1, 7, 5, 6], shape=(3, 3)
-    , kind=NodeKind.VIEW)
+    res = Tensor(
+        [2, 2, 1, 1, 4, 7, 9, 3, 2], shape=(3, 3), kind=NodeKind.VIEW
+    ) + Tensor([5, 1, 8, 2, 3, 1, 7, 5, 6], shape=(3, 3), kind=NodeKind.VIEW)
 
     assert res.data == [7, 3, 9, 3, 7, 8, 16, 8, 8]
 
 
 def test_sub_vector_vector():
-    res = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW) - Tensor([5, 1], shape=(2, 1), kind=NodeKind.VIEW)
+    res = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW) - Tensor(
+        [5, 1], shape=(2, 1), kind=NodeKind.VIEW
+    )
     assert res.data == [-3, 1]
 
 
-@pytest.mark.skip(reason="not implemented")
 def test_sub_vector_matrix():
-    pass
+    """Order matters: v - m reuses v as the left operand on every row."""
+    v = Tensor([1, 2, 3], shape=(3,), kind=NodeKind.VIEW)
+    m = Tensor([10, 20, 30, 40, 50, 60], shape=(2, 3), kind=NodeKind.VIEW)
+
+    res = v - m
+
+    assert res.shape == (2, 3)
+    assert res.data == [-9, -18, -27, -39, -48, -57]
 
 
 def test_sub_matrix_matrix():
-    res = Tensor([2, 2, 1, 1, 4, 7, 9, 3, 2], shape=(3, 3), kind=NodeKind.VIEW) - Tensor(
-        [5, 1, 8, 2, 3, 1, 7, 5, 6], shape=(3, 3)
-    , kind=NodeKind.VIEW)
+    res = Tensor(
+        [2, 2, 1, 1, 4, 7, 9, 3, 2], shape=(3, 3), kind=NodeKind.VIEW
+    ) - Tensor([5, 1, 8, 2, 3, 1, 7, 5, 6], shape=(3, 3), kind=NodeKind.VIEW)
     assert res.data == [-3, 1, -7, -1, 1, 6, 2, -2, -4]
 
 
 def test_mul_vector_vector():
-    res = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW) * Tensor([5, 1], shape=(2, 1), kind=NodeKind.VIEW)
+    res = Tensor([2, 2], shape=(2, 1), kind=NodeKind.VIEW) * Tensor(
+        [5, 1], shape=(2, 1), kind=NodeKind.VIEW
+    )
     assert res.data == [10, 2]
 
 
-@pytest.mark.skip(reason="not implemented")
 def test_mul_vector_matrix():
-    pass
+    """v[0] pairs with 10 in row 0 and 40 in row 1, so it is used twice."""
+    v = Tensor([1, 2, 3], shape=(3,), kind=NodeKind.VIEW)
+    m = Tensor([10, 20, 30, 40, 50, 60], shape=(2, 3), kind=NodeKind.VIEW)
+
+    res = v * m
+
+    assert res.shape == (2, 3)
+    assert res.data == [10, 40, 90, 40, 100, 180]
 
 
 def test_mul_matrix_matrix():
-    res = Tensor([2, 2, 1, 1, 4, 7, 9, 3, 2], shape=(3, 3), kind=NodeKind.VIEW) * Tensor(
-        [5, 1, 8, 2, 3, 1, 7, 5, 6], shape=(3, 3)
-    , kind=NodeKind.VIEW)
+    res = Tensor(
+        [2, 2, 1, 1, 4, 7, 9, 3, 2], shape=(3, 3), kind=NodeKind.VIEW
+    ) * Tensor([5, 1, 8, 2, 3, 1, 7, 5, 6], shape=(3, 3), kind=NodeKind.VIEW)
     assert res.data == [10, 2, 8, 2, 12, 7, 63, 15, 12]
 
 
