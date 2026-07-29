@@ -208,6 +208,8 @@ A couple of caveats/exceptions: I have no desire to write my own plotting librar
 
 ### Phase 8: The Original Transformer
 
+**Training-side support:**
+
 - [x] **Dropout** — train/eval mode, inverted scaling (regularization once nets get deep)
 - [x] **Layer normalization**
   - [Layer Normalization](https://arxiv.org/abs/1607.06450) — Ba et al., 2016
@@ -217,21 +219,43 @@ A couple of caveats/exceptions: I have no desire to write my own plotting librar
   - cosine decay: [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Loshchilov & Hutter, 2016
 - [x] **Label smoothing**\* — soften one-hot targets
   - [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) — Szegedy et al., 2016
+
+**Sequence data:**
+
 - [x] **Data pipeline — sequence collation** — pad + mask variable-length sequences, extending the eager tabular collate
-- [ ] **Scaled dot-product attention** — queries, keys, values
-- [ ] **Multi-head attention** — parallel attention heads, concatenation, projection
+- [ ] **Parallel corpus** — source/target sentence pairs as raw text, sized so a pure-Python training run finishes
+- [ ] **Tokenizer and vocabulary** — subword text encoding and decoding, fit on the corpus; fixes the vocabulary size and the special tokens (pad, bos, eos)
+  - [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909) — Sennrich et al., 2016
+  - [SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226) — Kudo & Richardson, 2018
+- [ ] **Sequence dataset** — a `Dataset` yielding source/target token-ID sequences, the first source to set `data_type = "sequence"`
+
+**The model:**
+
+- [ ] **Token embeddings** — a learned lookup mapping token IDs into `d_model` vectors
 - [ ] **Sinusoidal positional encoding** — injecting sequence order
-- [ ] **Token embeddings and output projection** — map token IDs into the model and decoder states back to vocabulary scores
+- [ ] **Scaled dot-product attention** — queries, keys, values
+- [ ] **Masking** — applying collation's padding mask, plus causal (look-ahead) masks for the decoder
+- [ ] **Multi-head attention** — parallel attention heads, concatenation, projection
 - [ ] **Position-wise feed-forward network** — the other half of a transformer block
 - [ ] **Encoder and decoder blocks** — assembling the full encoder–decoder architecture
-- [ ] **Masking** — padding masks, causal (look-ahead) masks
+- [ ] **Output projection** — decoder states back to vocabulary scores
 
 **Phase demonstration:**
 
 - [ ] **Original Transformer model** — assemble a trainable encoder–decoder sequence-to-sequence model
   - [Attention Is All You Need](https://arxiv.org/abs/1706.03762) — Vaswani et al., 2017
 
-### Phase 9: Modern Transformer Modifications
+### Phase 9: Decoder-Only Language Model
+
+- [ ] **Model state serialization** — save and restore parameters and training state
+- [ ] **Autoregressive generation support** — reusable sampling needed to generate sequences
+
+**Phase demonstration:**
+
+- [ ] **Decoder-only language model** — drop the encoder and cross-attention, reusing the decoder-side components to train, restore, and generate text with a causal model
+  - [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) — Radford et al., 2019
+
+### Phase 10: Modern Transformer Modifications
 
 - [ ] **RMSNorm** — replacing LayerNorm, dropping the mean centering
   - [Root Mean Square Layer Normalization](https://arxiv.org/abs/1910.07467) — Zhang & Sennrich, 2019
@@ -240,7 +264,14 @@ A couple of caveats/exceptions: I have no desire to write my own plotting librar
 - [ ] **Rotary Position Embedding (RoPE)** — rotation-based positional encoding replacing sinusoidal
   - [RoFormer: Enhanced Transformer with Rotary Position Embedding](https://arxiv.org/abs/2104.09864) — Su et al., 2021
 
-### Phase 10: Efficient Attention
+### Phase 11: Inference Optimizations
+
+- [ ] **KV-cache** — caching key/value pairs across the generation loop
+- [ ] **Speculative decoding** — draft model + verification for parallel token generation
+  - [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192) — Leviathan et al., 2022
+  - [Accelerating Large Language Model Decoding with Speculative Sampling](https://arxiv.org/abs/2302.01318) — Chen et al., 2023
+
+### Phase 12: Efficient Attention
 
 - [ ] **Multi-Query Attention (MQA)** — single shared KV head across all query heads
   - [Fast Transformer Decoding: One Write-Head is All You Need](https://arxiv.org/abs/1911.02150) — Shazeer, 2019
@@ -250,30 +281,11 @@ A couple of caveats/exceptions: I have no desire to write my own plotting librar
   - [Longformer: The Long-Document Transformer](https://arxiv.org/abs/2004.05150) — Beltagy et al., 2020
   - [Mistral 7B](https://arxiv.org/abs/2310.06825) — Jiang et al., 2023
 
-### Phase 11: Inference Optimizations
-
-- [ ] **KV-cache** — caching key/value pairs for autoregressive generation
-- [ ] **Speculative decoding** — draft model + verification for parallel token generation
-  - [Fast Inference from Transformers via Speculative Decoding](https://arxiv.org/abs/2211.17192) — Leviathan et al., 2022
-  - [Accelerating Large Language Model Decoding with Speculative Sampling](https://arxiv.org/abs/2302.01318) — Chen et al., 2023
-
-### Phase 12: Mixture of Experts
+### Phase 13: Mixture of Experts
 
 - [ ] **Sparse gating** — routing tokens to a subset of expert FFNs
 - [ ] **MoE transformer block** — integrating sparse experts into the transformer
   - [Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer](https://arxiv.org/abs/1701.06538) — Shazeer et al., 2017
-
-### Phase 13: Decoder-Only Language Model
-
-- [ ] **Tokenizer and vocabulary** — reusable text encoding and decoding
-  - [SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226) — Kudo & Richardson, 2018
-- [ ] **Model state serialization** — save and restore parameters and training state
-- [ ] **Autoregressive generation support** — reusable sampling needed to generate sequences
-
-**Phase demonstration:**
-
-- [ ] **Decoder-only language model** — reuse the decoder-side components to train, restore, and generate text with a causal model
-  - [Language Models are Unsupervised Multitask Learners](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf) — Radford et al., 2019
 
 ### Phase 14: Fine-Tuning
 
