@@ -217,7 +217,7 @@ A couple of caveats/exceptions: I have no desire to write my own plotting librar
   - cosine decay: [SGDR: Stochastic Gradient Descent with Warm Restarts](https://arxiv.org/abs/1608.03983) — Loshchilov & Hutter, 2016
 - [x] **Label smoothing**\* — soften one-hot targets
   - [Rethinking the Inception Architecture for Computer Vision](https://arxiv.org/abs/1512.00567) — Szegedy et al., 2016
-- [ ] **Data pipeline — sequence collation** — pad + mask variable-length sequences and lazily load tokens by offset, extending the eager tabular collate
+- [x] **Data pipeline — sequence collation** — pad + mask variable-length sequences, extending the eager tabular collate
 - [ ] **Scaled dot-product attention** — queries, keys, values
 - [ ] **Multi-head attention** — parallel attention heads, concatenation, projection
 - [ ] **Sinusoidal positional encoding** — injecting sequence order

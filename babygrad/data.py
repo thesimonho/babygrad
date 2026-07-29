@@ -4,7 +4,7 @@ import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 from babygrad import formatting
 from babygrad.types import NodeKind
@@ -19,10 +19,11 @@ class Sample(NamedTuple):
 
 
 class Batch(NamedTuple):
-    """A pair of target and feature tensors."""
+    """Features, targets, and masks for a batch of samples."""
 
     features: Tensor
     target: Tensor
+    mask: Tensor | None
 
 
 class Dataset(ABC):
@@ -31,6 +32,7 @@ class Dataset(ABC):
     """
 
     data: list[Sample]
+    data_type: Literal["tabular", "sequence"]
 
     def __init__(self, path: Path):
         self.path = path
@@ -80,6 +82,7 @@ class CSVDataset(Dataset):
         super().__init__(path)
         self.has_header = has_header
         self.target_col_idx = target_col_idx
+        self.data_type = "tabular"
         self.load(has_header)
 
     def __repr__(self) -> str:
@@ -127,6 +130,7 @@ class CSVDataset(Dataset):
 @dataclass
 class DataSplit:
     rows: list[Sample]
+    data_type: Literal["tabular", "sequence"] = "tabular"
     one_hot_mapping: dict | None = None
 
     def __getitem__(self, i):
@@ -166,17 +170,26 @@ class DataLoader:
             yield self.convert_to_tensor(shuffled[row : row + self.batch_size])
 
     def convert_to_tensor(self, rows: list[Sample]) -> Batch:
-        """Collate a list of Samples into one Batch of tensors.
-
-        Currently assumes flat, fixed-width tabular features and a classification/regression target.
-        Need to inject a collation fn for different types of data. Probably needs to accept config too.
-        """
+        """Receive and collate a list of Samples into one Batch of tensors."""
+        m = []
         x = []
         y = []
         y_cols = 1
 
+        max_length = max([len(r.features) for r in rows])
+
+        if self.data.data_type == "tabular":
+            collate_fn = collate_tabular
+        elif self.data.data_type == "sequence":
+            collate_fn = collate_seq
+        else:
+            raise ValueError("Missing collate function for data type")
+
         for row in rows:
-            x.extend(row.features)
+            collated, mask = collate_fn(row, max_length)
+            x.extend(collated)
+            if mask is not None:
+                m.extend(mask)
 
             if self.data.one_hot_mapping is not None:
                 one_hot_vector = self.data.one_hot_mapping[row.target[0]]
@@ -186,14 +199,33 @@ class DataLoader:
                 y.extend(row.target)
                 y_cols = len(row.target)
 
-        features = Tensor(
-            x, shape=(len(rows), len(rows[0].features)), kind=NodeKind.INPUT
+        mask = (
+            Tensor(
+                m, shape=(len(rows), max_length), kind=NodeKind.CONSTANT, name="mask"
+            )
+            if len(m) > 0
+            else None
         )
+        features = Tensor(x, shape=(len(rows), max_length), kind=NodeKind.INPUT)
         target = Tensor(y, shape=(len(rows), y_cols), kind=NodeKind.TARGET)
-        return Batch(features, target)
+        return Batch(features=features, target=target, mask=mask)
 
     def full_batch(self) -> Batch:
         return next(iter(self))
+
+
+def collate_seq(row: Sample, max_length: int, pad_id: int = 0) -> tuple[list, list]:
+    """Pad a sequence of token IDs to max length for the batch."""
+    if len(row.features) == max_length:
+        return row.features, [1] * len(row.features)
+
+    pad_count = max_length - len(row.features)
+    mask = [1] * len(row.features) + [0] * pad_count
+    return row.features + [pad_id] * pad_count, mask
+
+
+def collate_tabular(row: Sample, _) -> tuple[list, None]:
+    return row.features, None
 
 
 def split_train_val_test(
@@ -206,9 +238,9 @@ def split_train_val_test(
     train_end = int(dataset.nrow * train_prop)
     val_end = train_end + int(dataset.nrow * val_prop)
 
-    data_train = DataSplit(rows=shuffled[:train_end])
-    data_val = DataSplit(rows=shuffled[train_end:val_end])
-    data_test = DataSplit(rows=shuffled[val_end:])
+    data_train = DataSplit(rows=shuffled[:train_end], data_type=dataset.data_type)
+    data_val = DataSplit(rows=shuffled[train_end:val_end], data_type=dataset.data_type)
+    data_test = DataSplit(rows=shuffled[val_end:], data_type=dataset.data_type)
 
     if one_hot:
         one_hot_mapping = encode_one_hot(data_train)

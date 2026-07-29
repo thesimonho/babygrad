@@ -71,11 +71,11 @@ class Trainer:
 
             # training
             batches = DataLoader(train, self.config.batch_size)
-            for x_train, y_train in batches:
+            for batch in batches:
                 pred_train, train_loss_tensor, tracer = self._train_one_batch(
-                    x_train, y_train
+                    batch.features, batch.target
                 )
-                reporter.on_batch(y_train, pred_train, train_loss_tensor, tracer)
+                reporter.on_batch(batch.target, pred_train, train_loss_tensor, tracer)
 
             # validation
             validation_loss_value, _ = self.evaluate(val)
@@ -118,15 +118,15 @@ class Trainer:
         """
         Evaluate the model on a split, return loss and metrics.
         """
-        x, y = DataLoader(split).full_batch()
-        pred = self.model.eval(x)
+        batch = DataLoader(split).full_batch()
+        pred = self.model.eval(batch.features)
         with bound(_is_training, False):
-            loss = self.config.criterion(y, pred)
+            loss = self.config.criterion(batch.target, pred)
 
         metrics_output = {}
         if self.config.metrics is not None:
             for metric in self.config.metrics:
-                metrics_output[metric.name] = metric.compute(y, pred)
+                metrics_output[metric.name] = metric.compute(batch.target, pred)
 
         return loss.data[0], metrics_output
 

@@ -61,7 +61,7 @@ def train_iris(live: bool = False):
     if live:
         # Stream this run to a running dashboard server: connect before fit so the
         # graph and the loss/param plots fill in as training progresses.
-        sample_x, _ = next(iter(DataLoader(train, config.batch_size)))
+        sample_x, _, _ = next(iter(DataLoader(train, config.batch_size)))
         pusher = serve.connect(model, recorder, sample_x)
 
     train_loss = trainer.fit(train, val)
@@ -73,7 +73,7 @@ def train_iris(live: bool = False):
     if train_loss is not None:
         # Trace a fresh forward: the fit() loss carries no scope attribution, so
         # re-run one batch under a tracer to feed the graph views.
-        demo_x, demo_y = DataLoader(train, batch_size=config.batch_size).full_batch()
+        demo_x, demo_y, _ = DataLoader(train, batch_size=config.batch_size).full_batch()
         tracer = Tracer()
         with tracing(tracer):
             loss = config.criterion(demo_y, model.forward(demo_x))
@@ -130,7 +130,7 @@ def train_resnet(live: bool = False):
 
     pusher = None
     if live:
-        sample_x, _ = next(iter(DataLoader(train, config.batch_size)))
+        sample_x, _, _ = next(iter(DataLoader(train, config.batch_size)))
         pusher = serve.connect(model, recorder, sample_x)
 
     trainer.fit(train, val)
