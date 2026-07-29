@@ -1,4 +1,5 @@
 import math
+import operator
 
 from . import types
 
@@ -55,7 +56,7 @@ def dot(a: list[types.Number], b: list[types.Number]) -> types.Number:
     if len(a) != len(b):
         raise ValueError(f"lists must be the same length, got {len(a)} and {len(b)}")
 
-    return sum(mul(a, b))
+    return sum(map(operator.mul, a, b))
 
 
 def matmul(
@@ -70,15 +71,18 @@ def matmul(
     Shape of a tensor is always the last 2 dimensions. Any other dimensions are iterated dimensions: (batch, depth, row, col)
     """
     a_rows = a_shape[-2]
-    a_cols = a_shape[-1]
-    b_cols = b_shape[-1]
+    a_cols_count = a_shape[-1]
+    b_cols_count = b_shape[-1]
+
+    b_cols = []
+    for i in range(0, b_cols_count):
+        b_cols.append(b[i::b_cols_count])
 
     output = []
-    for i in range(0, a_rows * a_cols, a_cols):
-        left_row = a[i : i + a_cols]
+    for i in range(0, a_rows * a_cols_count, a_cols_count):
+        left_row = a[i : i + a_cols_count]
 
-        for j in range(0, b_cols):
-            right_col = b[j::b_cols]
+        for right_col in b_cols:
             if left_row and right_col:
                 # use dot product directly on vectors
                 result = dot(left_row, right_col)
