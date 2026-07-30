@@ -5,6 +5,17 @@ from babygrad.tensor import Tensor
 
 
 class Optimizer(ABC):
+    """Base class for optimizers.
+
+    Learning rate is deliberately not a constructor argument: it is expected to
+    be supplied by a Scheduler, or assigned directly via `.lr`. Reading `.lr`
+    before it is set raises, so a misconfigured training loop fails loudly on
+    the first step rather than silently doing nothing.
+
+    Attributes:
+        lr: current learning rate. Raises if read before being set.
+    """
+
     def __init__(self, parameters: list[Tensor]):
         self.parameters = parameters
         self._lr: float | None = None
@@ -16,7 +27,7 @@ class Optimizer(ABC):
     @property
     def lr(self):
         if self._lr is None:
-            raise ValueError(
+            raise RuntimeError(
                 "Learning rate unset. Get the value from a Scheduler or set .lr manually."
             )
         return self._lr
@@ -40,25 +51,34 @@ class SGD(Optimizer):
 
 
 class Adam(Optimizer):
-    """
-    Adaptive moment estimator.
+    """Adaptive moment estimator.
 
     Each learnable parameter (weight, bias, gamma, etc) has a exponential moving average of its first and second moments.
     The first moment (m) is mean gradient value. It tracks the magnitude and direction the gradient has recently moved in.
-    The second moment (v) is the gradient**2. It removes the sign and tells you about overall magnitude of recent steps.
+    The second moment (v) is the gradient**2. It removes the sign and tells you about overall magnitude of recent gradients.
 
-    Combined, this gives each parameter a pseudo "learning rate" allowing it to update more optimally; the (bounded) ratio m/v is large when the magnitude of the 2 moments agree, which then results in a larger step.
+    Combined, this gives each parameter a pseudo "learning rate" allowing it to update more optimally; the (bounded) ratio m/v is large when the sign of recent gradients agree, which then results in a larger step.
+
+    Attributes:
+        m: first moment EMA, one slot per scalar, parallel to `parameters`
+        v: second moment EMA, same shape as `m`
+        time: step counter used for bias correction
     """
 
     def __init__(
         self,
         parameters: list[Tensor],
-        beta1: float = 9e-1,
-        beta2: float = 9.99e-1,
+        beta1: float = 0.9,
+        beta2: float = 0.999,
         epsilon: float = 1e-8,
     ):
-        """
-        parameters is the filtered list of learnable parameters (weights, bias, etc)
+        """Adam optimizer constructor
+
+        Args:
+            parameters: the model's learnable parameters.
+            beta1: historical weight for EMA of the 1st moment (m)
+            beta2: historical weight for EMA of the 2nd moment (v)
+            epsilon: small nudge factor to prevent division by 0
         """
         super().__init__(parameters)
         self.beta1 = beta1
