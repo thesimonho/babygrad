@@ -142,7 +142,7 @@ class _DashboardHandler(BaseHTTPRequestHandler):
                     self._write_event("epoch", _delta_for_step(history, step))
                     last_step = step
                 time.sleep(_POLL_SECONDS)
-        except (BrokenPipeError, ConnectionResetError):
+        except BrokenPipeError, ConnectionResetError:
             return  # client closed the tab; end this stream thread
 
     def _write_event(self, event: str, data: dict) -> None:
@@ -224,7 +224,9 @@ def run_server(host: str = "127.0.0.1", port: int = 8000) -> None:
     """Start the standalone dashboard server and serve until interrupted. Open the
     printed URL, then start a training run with ``--dashboard`` to stream to it."""
     server = DashboardServer((host, port))
-    print(f"babygrad dashboard: http://{host}:{port} — start a --dashboard run to stream")
+    print(
+        f"babygrad dashboard: http://{host}:{port} — start a --dashboard run to stream"
+    )
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -268,7 +270,9 @@ class _Pusher:
             for step in _steps_after(snapshot, self._last_step):
                 if step >= boundary:
                     break  # steps are sorted; the rest are still in progress
-                _post_json(f"{self._base_url}/ingest/epoch", _delta_for_step(snapshot, step))
+                _post_json(
+                    f"{self._base_url}/ingest/epoch", _delta_for_step(snapshot, step)
+                )
                 self._last_step = step
 
 
@@ -290,11 +294,13 @@ def connect(
     base_url = f"http://{host}:{port}"
     payload, node_stats = _graph_snapshot(model, sample_input)
     try:
-        _post_json(f"{base_url}/ingest/run", {"graph": payload, "node_stats": node_stats})
+        _post_json(
+            f"{base_url}/ingest/run", {"graph": payload, "node_stats": node_stats}
+        )
     except OSError:
-        print(f"no dashboard server at {base_url} — start it with `just dashboard`")
+        print(f"no dashboard server at {base_url} — start it with `just dashboard`\n")
         return None
-    print(f"streaming to babygrad dashboard: {base_url}")
+    print(f"streaming to babygrad dashboard: {base_url}\n")
     return _Pusher(recorder, base_url)
 
 
