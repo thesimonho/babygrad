@@ -1,8 +1,10 @@
-from pytest import approx
 import math
 
+import pytest
+from pytest import approx
+
 from babygrad.nn.activations import Softmax
-from babygrad.nn.losses import CCE, MSE
+from babygrad.nn.losses import CCE, MSE, SoftmaxCrossEntropy
 from babygrad.tensor import Tensor
 from babygrad.types import NodeKind
 
@@ -42,3 +44,31 @@ def test_cce_one_hot_targets():
 
     assert loss.shape == (1, 1)
     assert loss.data == approx([-(math.log(0.8) + math.log(0.7)) / 2])
+
+
+def test_softmax_cross_entropy_matches_separate_softmax_and_cce_for_batch():
+    logits = Tensor([2, 1, 0, -1, 0, 1], shape=(2, 3), kind=NodeKind.VIEW)
+    targets = Tensor([1, 0, 0, 0, 0, 1], shape=(2, 3), kind=NodeKind.VIEW)
+
+    probabilities = Softmax().forward(logits)
+    separate_loss = CCE().forward(targets, probabilities)
+    fused_loss = SoftmaxCrossEntropy().forward(targets, logits)
+
+    assert fused_loss.shape == (1, 1)
+    assert fused_loss.data == approx(separate_loss.data)
+
+
+def test_softmax_cross_entropy_stays_finite_when_probability_underflows():
+    logits = Tensor([1000, 0, -1000], shape=(1, 3), kind=NodeKind.VIEW)
+    targets = Tensor([0, 0, 1], shape=(1, 3), kind=NodeKind.VIEW)
+
+    probabilities = Softmax().forward(logits)
+
+    assert probabilities.data == [1.0, 0.0, 0.0]
+    with pytest.raises(ValueError):
+        CCE().forward(targets, probabilities)
+
+    fused_loss = SoftmaxCrossEntropy().forward(targets, logits)
+
+    assert math.isfinite(fused_loss.data[0])
+    assert fused_loss.data == approx([2000.0])

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from babygrad.data import CSVDataset, DataLoader, split_train_val_test
 from babygrad.metrics import Accuracy
 from babygrad.nn.activations import ReLU, Softmax
-from babygrad.nn.losses import CCE
+from babygrad.nn.losses import CCE, SoftmaxCrossEntropy
 from babygrad.nn.model import Model, TrainConfig, Trainer
 from babygrad.nn.modules import (
     BatchNorm,
@@ -113,7 +113,7 @@ def train_resnet(live: bool = False):
     layers: list[Module] = [Linear(train.n_features, width)]
     for _ in range(blocks):
         layers.append(Residual(Sequential(block_body())))
-    layers += [Linear(width, train.n_targets), Softmax()]
+    layers += [Linear(width, train.n_targets)]
     root = Sequential(layers)
 
     config = TrainConfig(
@@ -121,7 +121,7 @@ def train_resnet(live: bool = False):
         batch_size=64,
         optimizer=Adam(root.parameters()),
         scheduler=CosineAnnealingLR(T_0=1, T_mult=2),
-        criterion=CCE(collapse=True),
+        criterion=SoftmaxCrossEntropy(collapse=True),
         metrics=[Accuracy()],
     )
     model = Model(root)
