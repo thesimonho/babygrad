@@ -224,7 +224,7 @@ A couple of caveats/exceptions: I have no desire to write my own plotting librar
 
 - [x] **Data pipeline — sequence collation** — pad + mask variable-length sequences, extending the eager tabular collate
 - [x] **Parallel corpus** — source/target sentence pairs as raw text, sized so a pure-Python training run finishes
-- [ ] **Tokenizer and vocabulary** — subword text encoding and decoding, fit on the corpus; fixes the vocabulary size and the special tokens (pad, bos, eos)
+- [x] **Tokenizer and vocabulary** — subword text encoding and decoding, fit on the corpus; fixes the vocabulary size and the special tokens (pad, bos, eos)
   - [Neural Machine Translation of Rare Words with Subword Units](https://arxiv.org/abs/1508.07909) — Sennrich et al., 2016
   - [SentencePiece: A simple and language independent subword tokenizer and detokenizer for Neural Text Processing](https://arxiv.org/abs/1808.06226) — Kudo & Richardson, 2018
 - [ ] **Sequence dataset** — a `Dataset` yielding source/target token-ID sequences
