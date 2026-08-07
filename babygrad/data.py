@@ -9,6 +9,7 @@ from typing import Literal, NamedTuple
 from babygrad import formatting
 from babygrad.types import NodeKind
 from babygrad.tensor import Tensor
+from babygrad.tokenizers import Tokenizer
 
 
 class Sample(NamedTuple):
@@ -214,7 +215,9 @@ class DataLoader:
         return next(iter(self))
 
 
-def collate_seq(row: Sample, max_length: int, pad_id: int = 0) -> tuple[list, list]:
+def collate_seq(
+    row: Sample, max_length: int, pad_id: int = Tokenizer.PAD_ID
+) -> tuple[list, list]:
     """Pad a sequence of token IDs to max length for the batch."""
     if len(row.features) == max_length:
         return row.features, [1] * len(row.features)
